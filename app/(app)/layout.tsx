@@ -19,6 +19,7 @@ import { PostCreator } from "@/components/app/feed/post-creator";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const primaryColor = "var(--primary)";
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const isAuthPage = pathname.includes("/auth");
 
@@ -105,13 +106,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         border: "1px solid rgba(0,0,0,0.05)"
       }}>
         {menuItems.map((item) => {
-          const purpleColor = "#7c3aed";
           if (item.isFloating) {
              return (
                <div key={item.label} onClick={item.onClick} style={{ 
-                  marginTop: -40, width: 58, height: 58, borderRadius: "50%", background: purpleColor,
+                  marginTop: -40, width: 58, height: 58, borderRadius: "50%", background: "var(--primary)",
                   display: "grid", placeItems: "center", color: "white", border: "5px solid white",
-                  boxShadow: `0 10px 20px rgba(124, 58, 237, 0.3)`, cursor: "pointer"
+                  boxShadow: `0 10px 20px var(--primary-soft)`, cursor: "pointer"
                }}>
                   <Plus size={28} strokeWidth={3} />
                </div>
@@ -121,7 +121,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           return (
             <Link key={item.label} href={item.href!} style={{ 
               display: "flex", flexDirection: "column", alignItems: "center", gap: 2, 
-              textDecoration: "none", color: isActive ? purpleColor : "#6b7280"
+              textDecoration: "none", color: isActive ? "var(--primary)" : "#6b7280"
             }}>
               <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
               <span style={{ fontSize: 9, fontWeight: 800 }}>{item.label}</span>

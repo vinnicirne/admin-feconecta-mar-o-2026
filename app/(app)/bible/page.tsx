@@ -14,7 +14,7 @@ import {
   Share2
 } from "lucide-react";
 
-// --- DADOS BÍBLICOS COMPLETOS ---
+// --- DADOS BÍBLICOS COMPLETOS (IDs COMPATÍVEIS COM HELLOAO API) ---
 const OLD_TESTAMENT = [
   { id: "GEN", name: "Gênesis" }, { id: "EXO", name: "Êxodo" }, { id: "LEV", name: "Levítico" },
   { id: "NUM", name: "Números" }, { id: "DEU", name: "Deuteronômio" }, { id: "JOS", name: "Josué" },
@@ -49,12 +49,36 @@ export default function BiblePage() {
   const [testament, setTestament] = useState<"old" | "new">("old");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBook, setSelectedBook] = useState<any>(null);
+  const [bookDetails, setBookDetails] = useState<any>(null);
   const [chapter, setChapter] = useState(1);
   const [verses, setVerses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedVerses, setSelectedVerses] = useState<number[]>([]);
 
-  // Carregar versículos
+  const primaryColor = "var(--primary)";
+
+  // Buscar detalhes do livro ao selecionar
+  useEffect(() => {
+    if (selectedBook && view === "chapters") {
+      fetchBookDetails();
+    }
+  }, [selectedBook, view]);
+
+  const fetchBookDetails = async () => {
+    try {
+      setLoading(true);
+      const url = `https://bible.helloao.org/api/v1/translations/nvi/books/${selectedBook.id}.json`;
+      const res = await fetch(url);
+      const data = await res.json();
+      setBookDetails(data.book);
+    } catch (err) {
+      console.error("ERRO BOOK:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Carregar versículos ao navegar para leitura
   useEffect(() => {
     if (view === "reading" && selectedBook) {
       fetchBibleChapter();
@@ -69,7 +93,7 @@ export default function BiblePage() {
       const data = await res.json();
       setVerses(data.chapter?.verses || []);
     } catch (err) {
-      console.error("ERRO:", err);
+      console.error("ERRO VERSES:", err);
     } finally {
       setLoading(false);
     }
@@ -77,8 +101,6 @@ export default function BiblePage() {
 
   const currentBooks = testament === "old" ? OLD_TESTAMENT : NEW_TESTAMENT;
   const filteredBooks = currentBooks.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
-  const primaryColor = "#7c3aed";
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 20px 140px" }}>
@@ -96,7 +118,6 @@ export default function BiblePage() {
 
         {view === "books" && (
           <>
-            {/* Barra de Busca Estilo Print */}
             <div style={{ position: "relative", marginBottom: 32 }}>
               <input 
                 type="text" 
@@ -116,7 +137,6 @@ export default function BiblePage() {
               </button>
             </div>
 
-            {/* Abas de Testamento Estilo Print */}
             <div style={{ display: "flex", borderBottom: "1px solid #e5e7eb" }}>
               <button 
                 onClick={() => setTestament("old")}
@@ -164,21 +184,24 @@ export default function BiblePage() {
         {view === "chapters" && selectedBook && (
           <div style={{ textAlign: "center" }}>
             <h2 style={{ marginBottom: 32, fontSize: "20px" }}>{selectedBook.name}</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
-              {Array.from({ length: 50 }, (_, i) => i + 1).map(num => (
-                <button 
-                  key={num} 
-                  onClick={() => { setChapter(num); setView("reading"); }}
-                  style={{ 
-                    padding: "16px 0", borderRadius: "12px", border: "1px solid #e5e7eb", 
-                    background: "white", fontWeight: 800, fontSize: "14px"
-                  }}
-                >
-                  {num}
-                </button>
-              ))}
-            </div>
-            <p className="muted" style={{ marginTop: 20, fontSize: "12px" }}>Exibindo os primeiros 50 capítulos para seleção</p>
+            {loading ? (
+              <div style={{ textAlign: "center", padding: 40 }}><Sparkles className="spin" color={primaryColor} /></div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+                {bookDetails?.chapters.map((ch: any) => (
+                  <button 
+                    key={ch.number} 
+                    onClick={() => { setChapter(ch.number); setView("reading"); }}
+                    style={{ 
+                      padding: "16px 0", borderRadius: "12px", border: "1px solid #e5e7eb", 
+                      background: "white", fontWeight: 800, fontSize: "14px"
+                    }}
+                  >
+                    {ch.number}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -196,7 +219,7 @@ export default function BiblePage() {
                       onClick={() => setSelectedVerses(prev => prev.includes(v.number) ? prev.filter(x => x !== v.number) : [...prev, v.number])}
                       style={{ 
                         padding: "2px 4px", borderRadius: "6px",
-                        background: selectedVerses.includes(v.number) ? `${primaryColor}20` : "transparent"
+                        background: selectedVerses.includes(v.number) ? "var(--primary-soft)" : "transparent"
                       }}
                     >
                       <sup style={{ color: primaryColor, fontWeight: 900, marginRight: 5 }}>{v.number}</sup> {v.content}
