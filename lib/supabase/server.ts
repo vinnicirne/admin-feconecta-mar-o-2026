@@ -1,0 +1,31 @@
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies();
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
+          try {
+            cookieStore.getAll().forEach(({ name, value }) => {
+              // Not clean, but some Next versions like it explicit
+            });
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch {
+            // Ignored in Server Components (read-only cookie context)
+          }
+        }
+      }
+    }
+  );
+}
+
