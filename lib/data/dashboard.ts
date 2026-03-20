@@ -44,3 +44,52 @@ export const managedUsers: ManagedUser[] = [
     activityHistory: ["Alerta de segurança gerado"]
   }
 ];
+
+// --- DADOS DE AUTOMAÇÃO E MODERAÇÃO ---
+export const prohibitedWords = ["spam", "propaganda", "ofensa", "fake news"];
+
+export const moderationDetectors: any[] = [
+  {
+    id: "ia-toxic",
+    label: "Detecção de Toxicidade (IA)",
+    description: "Analisa o tom e a intenção de mensagens usando modelos de linguagem natural.",
+    enabled: true,
+    sensitivity: "medium",
+    action: "hide"
+  },
+  {
+    id: "spam-filter",
+    label: "Filtro Anti-Spam",
+    description: "Identifica links repetitivos, comportamentos robóticos e mensagens em massa.",
+    enabled: true,
+    sensitivity: "high",
+    action: "alert"
+  }
+];
+
+// --- DADOS DE RELATÓRIOS ---
+export const moderationReports: any[] = [
+  {
+    id: "REP-001",
+    category: "hate_speech",
+    targetType: "post",
+    targetLabel: "Post inadequado sobre doutrina",
+    reporter: "Membro Preocupado",
+    createdAt: "2026-03-20",
+    queue: "high",
+    summary: "Conteúdo que fere as diretrizes básicas de respeito mútuo da comunidade.",
+    decisionHistory: ["IA sinalizou como risco alto"],
+    userActionHint: "Revisar e possivelmente ocultar"
+  }
+];
+
+// --- DADOS DE ACESSO E SEGURAÇA ---
+export const accessLogs: any[] = [
+  { id: "LOG-001", actor: "Vinicius (Admin)", action: "Login realizado", location: "Rio de Janeiro, BR", device: "Chrome / Windows", createdAt: "2026-03-20 10:30" }
+];
+
+export const managedPosts = [];
+export const revenueSnapshot = {};
+export const managedCommunities = [];
+export const managedLives = [];
+export const bibleVersions = [];
