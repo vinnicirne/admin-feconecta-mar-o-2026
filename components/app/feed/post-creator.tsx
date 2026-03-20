@@ -23,6 +23,7 @@ import {
   Loader2
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { createPostAction } from "@/app/actions/post-actions";
 
 export function PostCreator({ forceExpanded }: { forceExpanded?: boolean }) {
   const [isExpanded, setIsExpanded] = useState(forceExpanded || false);
@@ -90,7 +91,7 @@ export function PostCreator({ forceExpanded }: { forceExpanded?: boolean }) {
             const fileName = `${Math.random()}.${fileExt}`;
             const filePath = `${Date.now()}_${fileName}`;
 
-            const { error: uploadError, data } = await supabase.storage
+            const { error: uploadError } = await supabase.storage
                 .from('posts')
                 .upload(filePath, media.file);
 
@@ -112,8 +113,8 @@ export function PostCreator({ forceExpanded }: { forceExpanded?: boolean }) {
                 throw new Error(errorData.error || 'Failed to upload media');
             }
 
-            const data = await response.json();
-            mediaUrl = data.publicUrl;
+            const uploadResult = await response.json();
+            mediaUrl = uploadResult.publicUrl;
         }
 
         // 3. Persistir Post com Segurança Inviolável (Server Action Proxy)
