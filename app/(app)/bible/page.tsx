@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { 
-  Book as BookIcon, 
   ChevronRight, 
   ChevronLeft, 
-  Settings, 
   Search,
   Sparkles,
   Highlighter,
@@ -14,73 +12,42 @@ import {
   Share2
 } from "lucide-react";
 
-// --- DADOS BÍBLICOS COMPLETOS (IDs COMPATÍVEIS COM HELLOAO API) ---
-const OLD_TESTAMENT = [
-  { id: "GEN", name: "Gênesis" }, { id: "EXO", name: "Êxodo" }, { id: "LEV", name: "Levítico" },
-  { id: "NUM", name: "Números" }, { id: "DEU", name: "Deuteronômio" }, { id: "JOS", name: "Josué" },
-  { id: "JDG", name: "Juízes" }, { id: "RUT", name: "Rute" }, { id: "1SA", name: "1 Samuel" },
-  { id: "2SA", name: "2 Samuel" }, { id: "1KI", name: "1 Reis" }, { id: "2KI", name: "2 Reis" },
-  { id: "1CH", name: "1 Crônicas" }, { id: "2CH", name: "2 Crônicas" }, { id: "EZR", name: "Esdras" },
-  { id: "NEH", name: "Neemias" }, { id: "EST", name: "Ester" }, { id: "JOB", name: "Jó" },
-  { id: "PSA", name: "Salmos" }, { id: "PRO", name: "Provérbios" }, { id: "ECC", name: "Eclesiastes" },
-  { id: "SNG", name: "Cantares" }, { id: "ISA", name: "Isaías" }, { id: "JER", name: "Jeremias" },
-  { id: "LAM", name: "Lamentações" }, { id: "EZK", name: "Ezequiel" }, { id: "DAN", name: "Daniel" },
-  { id: "HOS", name: "Oseias" }, { id: "JOL", name: "Joel" }, { id: "AMO", name: "Amós" },
-  { id: "OBA", name: "Obadias" }, { id: "JON", name: "Jonas" }, { id: "MIC", name: "Miqueias" },
-  { id: "NAM", name: "Naum" }, { id: "HAB", name: "Habacuque" }, { id: "ZEP", name: "Sofonias" },
-  { id: "HAG", name: "Ageu" }, { id: "ZEC", name: "Zacarias" }, { id: "MAL", name: "Malaquias" }
-];
-
-const NEW_TESTAMENT = [
-  { id: "MAT", name: "Mateus" }, { id: "MRK", name: "Marcos" }, { id: "LUK", name: "Lucas" },
-  { id: "JHN", name: "João" }, { id: "ACT", name: "Atos" }, { id: "ROM", name: "Romanos" },
-  { id: "1CO", name: "1 Coríntios" }, { id: "2CO", name: "2 Coríntios" }, { id: "GAL", name: "Gálatas" },
-  { id: "EPH", name: "Efésios" }, { id: "PHP", name: "Filipenses" }, { id: "COL", name: "Colossenses" },
-  { id: "1TH", name: "1 Tessalonicenses" }, { id: "2TH", name: "2 Tessalonicenses" },
-  { id: "1TI", name: "1 Timóteo" }, { id: "2TI", name: "2 Timóteo" }, { id: "TIT", name: "Tito" },
-  { id: "PHM", name: "Filemon" }, { id: "HEB", name: "Hebreus" }, { id: "JAS", name: "Tiago" },
-  { id: "1PE", name: "1 Pedro" }, { id: "2PE", name: "2 Pedro" }, { id: "1JN", name: "1 João" },
-  { id: "2JN", name: "2 João" }, { id: "3JN", name: "3 João" }, { id: "JUD", name: "Judas" },
-  { id: "REV", name: "Apocalipse" }
-];
-
 export default function BiblePage() {
   const [view, setView] = useState<"books" | "chapters" | "reading">("books");
   const [testament, setTestament] = useState<"old" | "new">("old");
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Dados da API
+  const [allBooks, setAllBooks] = useState<any[]>([]);
   const [selectedBook, setSelectedBook] = useState<any>(null);
-  const [bookDetails, setBookDetails] = useState<any>(null);
   const [chapter, setChapter] = useState(1);
   const [verses, setVerses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedVerses, setSelectedVerses] = useState<number[]>([]);
 
-  // Tradução oficial disponível na API helloao para Português (Nova Bíblia Viva)
-  const translationId = "por_onbv";
+  const translationId = "por_onbv"; // Nova Bíblia Viva
   const primaryColor = "var(--primary)";
 
-  // Buscar detalhes do livro ao selecionar
+  // 1. Carregar lista de livros ao iniciar
   useEffect(() => {
-    if (selectedBook && view === "chapters") {
-      fetchBookDetails();
-    }
-  }, [selectedBook, view]);
+    fetchBooks();
+  }, []);
 
-  const fetchBookDetails = async () => {
+  const fetchBooks = async () => {
     try {
       setLoading(true);
-      const url = `https://bible.helloao.org/api/${translationId}/${selectedBook.id}.json`;
+      const url = `https://bible.helloao.org/api/${translationId}/books.json`;
       const res = await fetch(url);
       const data = await res.json();
-      setBookDetails(data.book);
+      setAllBooks(data.books || []);
     } catch (err) {
-      console.error("ERRO BOOK:", err);
+      console.error("ERRO AO CARREGAR LIVROS:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Carregar versículos ao navegar para leitura
+  // 2. Carregar conteúdo do capítulo
   useEffect(() => {
     if (view === "reading" && selectedBook) {
       fetchBibleChapter();
@@ -94,15 +61,21 @@ export default function BiblePage() {
       const res = await fetch(url);
       const data = await res.json();
       setVerses(data.chapter?.verses || []);
+      window.scrollTo(0, 0);
     } catch (err) {
-      console.error("ERRO VERSES:", err);
+      console.error("ERRO AO CARREGAR CAPÍTULO:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const currentBooks = testament === "old" ? OLD_TESTAMENT : NEW_TESTAMENT;
-  const filteredBooks = currentBooks.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Filtragem (Livros 1-39 são Antigo Testamento, 40-66 são Novo)
+  const currentBooks = allBooks.filter(b => {
+    const isNew = b.order > 39;
+    const matchesTestament = testament === "old" ? !isNew : isNew;
+    const matchesSearch = b.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTestament && matchesSearch;
+  });
 
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 20px 140px" }}>
@@ -165,9 +138,11 @@ export default function BiblePage() {
 
       {/* 🔴 GRID DE SELEÇÃO OU ÁREA DE LEITURA */}
       <div style={{ marginTop: 24 }}>
+        {loading && view === "books" && <div style={{ textAlign: "center", padding: 40 }}><Sparkles className="spin" color={primaryColor} /></div>}
+
         {view === "books" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 2 }}>
-            {filteredBooks.map(book => (
+            {currentBooks.map(book => (
               <button 
                 key={book.id} 
                 onClick={() => { setSelectedBook(book); setView("chapters"); }}
@@ -185,37 +160,33 @@ export default function BiblePage() {
 
         {view === "chapters" && selectedBook && (
           <div style={{ textAlign: "center" }}>
-            <h2 style={{ marginBottom: 32, fontSize: "20px" }}>{selectedBook.name}</h2>
-            {loading ? (
-              <div style={{ textAlign: "center", padding: 40 }}><Sparkles className="spin" color={primaryColor} /></div>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
-                {bookDetails?.chapters.map((ch: any) => (
-                  <button 
-                    key={ch.number} 
-                    onClick={() => { setChapter(ch.number); setView("reading"); }}
-                    style={{ 
-                      padding: "16px 0", borderRadius: "12px", border: "1px solid #e5e7eb", 
-                      background: "white", fontWeight: 800, fontSize: "14px"
-                    }}
-                  >
-                    {ch.number}
-                  </button>
-                ))}
-              </div>
-            )}
+            <h2 style={{ marginBottom: 32, fontSize: "20px", fontWeight: 800 }}>{selectedBook.name}</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+              {Array.from({ length: selectedBook.numberOfChapters }, (_, i) => i + 1).map(num => (
+                <button 
+                  key={num} 
+                  onClick={() => { setChapter(num); setView("reading"); }}
+                  style={{ 
+                    padding: "16px 0", borderRadius: "12px", border: "1px solid #e5e7eb", 
+                    background: "white", fontWeight: 800, fontSize: "14px"
+                  }}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         {view === "reading" && selectedBook && (
-          <article style={{ lineHeight: 2, fontSize: "1.2rem", fontFamily: "serif" }}>
+          <article style={{ lineHeight: 2, fontSize: "1.15rem", fontFamily: "serif" }}>
              <h3 style={{ fontFamily: "sans-serif", fontWeight: 900, fontSize: "28px", marginBottom: 32 }}>{selectedBook.name} {chapter}</h3>
              
              {loading ? (
                 <div style={{ textAlign: "center", padding: 60 }}><Sparkles className="spin" color={primaryColor} /></div>
              ) : (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0 8px" }}>
-                  {verses.map(v => (
+                  {verses.map((v: any) => (
                     <span 
                       key={v.number} 
                       onClick={() => setSelectedVerses(prev => prev.includes(v.number) ? prev.filter(x => x !== v.number) : [...prev, v.number])}
@@ -224,7 +195,8 @@ export default function BiblePage() {
                         background: selectedVerses.includes(v.number) ? "var(--primary-soft)" : "transparent"
                       }}
                     >
-                      <sup style={{ color: primaryColor, fontWeight: 900, marginRight: 5 }}>{v.number}</sup> {v.content}
+                      <sup style={{ color: primaryColor, fontWeight: 900, marginRight: 5 }}>{v.number}</sup>
+                      {v.content}
                     </span>
                   ))}
                 </div>
@@ -233,30 +205,22 @@ export default function BiblePage() {
         )}
       </div>
 
-       {/* Ações Rápidas ao selecionar */}
+       {/* Ações Rápidas */}
        {selectedVerses.length > 0 && (
         <div style={{ 
-          position: "fixed", bottom: 120, left: "50%", transform: "translateX(-50%)", width: "90%", 
-          background: "black", padding: "16px 24px", borderRadius: "24px", display: "flex", 
-          justifyContent: "space-between", alignItems: "center", zIndex: 1000 
+          position: "fixed", bottom: 120, left: "50%", transform: "translateX(-50%)", width: "92%", 
+          background: "#111827", padding: "16px 24px", borderRadius: "24px", display: "flex", 
+          justifyContent: "space-between", alignItems: "center", zIndex: 1000, boxShadow: "0 20px 50px rgba(0,0,0,0.2)"
         }}>
-           <span style={{ color: "white", fontWeight: 700, fontSize: "13px" }}>{selectedVerses.length} versículos</span>
-           <div style={{ display: "flex", gap: 12 }}>
-              <ActionButton icon={Highlighter} color="#facc15" />
-              <ActionButton icon={StickyNote} color="#10b981" />
-              <ActionButton icon={PlusCircle} color={primaryColor} />
-              <ActionButton icon={Share2} color="white" />
+           <span style={{ color: "white", fontWeight: 700, fontSize: "13px" }}>{selectedVerses.length} selecionados</span>
+           <div style={{ display: "flex", gap: 16 }}>
+              <button style={{ background: "none", border: 0 }}><Highlighter size={20} color="#facc15" /></button>
+              <button style={{ background: "none", border: 0 }}><StickyNote size={20} color="#10b981" /></button>
+              <button style={{ background: "none", border: 0 }}><PlusCircle size={20} color={primaryColor} /></button>
+              <button style={{ background: "none", border: 0 }}><Share2 size={20} color="white" /></button>
            </div>
         </div>
       )}
     </div>
-  );
-}
-
-function ActionButton({ icon: Icon, color }: any) {
-  return (
-    <button style={{ background: "none", border: 0, padding: 4 }}>
-      <Icon size={20} color={color} />
-    </button>
   );
 }
