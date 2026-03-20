@@ -96,20 +96,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* 🔴 MOBILE BOTTOM NAV (CENTRAL + COM DISPARO DE MODAL) */}
+      {/* 🔴 MOBILE BOTTOM NAV (ESTILO PREMIUM CLARO) */}
       <nav className="mobile-bottom-nav" style={{ 
         position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", 
-        width: "92%", height: 72, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(20px)",
-        borderRadius: 24, boxShadow: "0 20px 50px rgba(0,0,0,0.3)", zIndex: 1050,
-        display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px"
+        width: "92%", height: 72, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(20px)",
+        borderRadius: 24, boxShadow: "0 15px 40px rgba(0,0,0,0.08)", zIndex: 1050,
+        display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px",
+        border: "1px solid rgba(0,0,0,0.05)"
       }}>
         {menuItems.map((item) => {
+          const purpleColor = "#7c3aed";
           if (item.isFloating) {
              return (
                <div key={item.label} onClick={item.onClick} style={{ 
-                  marginTop: -40, width: 58, height: 58, borderRadius: "50%", background: "var(--primary)",
+                  marginTop: -40, width: 58, height: 58, borderRadius: "50%", background: purpleColor,
                   display: "grid", placeItems: "center", color: "white", border: "5px solid white",
-                  boxShadow: "0 10px 20px rgba(16, 185, 129, 0.4)", cursor: "pointer"
+                  boxShadow: `0 10px 20px rgba(124, 58, 237, 0.3)`, cursor: "pointer"
                }}>
                   <Plus size={28} strokeWidth={3} />
                </div>
@@ -119,7 +121,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           return (
             <Link key={item.label} href={item.href!} style={{ 
               display: "flex", flexDirection: "column", alignItems: "center", gap: 2, 
-              textDecoration: "none", color: isActive ? "white" : "rgba(255,255,255,0.4)"
+              textDecoration: "none", color: isActive ? purpleColor : "#6b7280"
             }}>
               <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} />
               <span style={{ fontSize: 9, fontWeight: 800 }}>{item.label}</span>
