@@ -7,9 +7,14 @@ import { getMockSession } from "@/lib/auth/session";
 import { LayoutShell } from "@/components/layout/layout-shell";
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  const supabase = await createServerSupabaseClient();
-  const { data } = await supabase.auth.getUser();
-  const authUser = data?.user;
+  let authUser = null;
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data } = await supabase.auth.getUser();
+    authUser = data?.user;
+  } catch (error) {
+    console.warn("Supabase Auth failure at layout (ignoring for build/preview):", error);
+  }
   
   const user = authUser ? { 
     id: authUser.id, 
