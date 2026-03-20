@@ -85,6 +85,7 @@ export type ManagedPost = {
   excerpt: string;
   commentsCount: number;
   interactionsSummary: string;
+  communityName?: string;
 };
 
 export type ReportCategory =
