@@ -80,6 +80,7 @@ export type ManagedPost = {
   reports: number;
   sensitive: boolean;
   hidden: boolean;
+  status: "published" | "pending" | "hidden";
   title: string;
   excerpt: string;
   commentsCount: number;

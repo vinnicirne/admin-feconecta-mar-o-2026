@@ -31,7 +31,8 @@ export default async function PostsPage() {
     commentsCount: p.comments_count || 0,
     interactionsSummary: `${p.likes_count || 0} curtidas`,
     sensitive: p.is_flagged || false,
-    hidden: p.status === 'hidden'
+    hidden: p.status === 'hidden',
+    status: p.status || 'published'
   })) : mockPosts;
 
   return (
