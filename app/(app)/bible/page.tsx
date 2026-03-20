@@ -55,6 +55,8 @@ export default function BiblePage() {
   const [loading, setLoading] = useState(false);
   const [selectedVerses, setSelectedVerses] = useState<number[]>([]);
 
+  // Tradução oficial disponível na API helloao para Português (Nova Bíblia Viva)
+  const translationId = "por_onbv";
   const primaryColor = "var(--primary)";
 
   // Buscar detalhes do livro ao selecionar
@@ -67,7 +69,7 @@ export default function BiblePage() {
   const fetchBookDetails = async () => {
     try {
       setLoading(true);
-      const url = `https://bible.helloao.org/api/v1/translations/nvi/books/${selectedBook.id}.json`;
+      const url = `https://bible.helloao.org/api/${translationId}/${selectedBook.id}.json`;
       const res = await fetch(url);
       const data = await res.json();
       setBookDetails(data.book);
@@ -88,7 +90,7 @@ export default function BiblePage() {
   const fetchBibleChapter = async () => {
     try {
       setLoading(true);
-      const url = `https://bible.helloao.org/api/v1/translations/nvi/books/${selectedBook.id}/chapters/${chapter}.json`;
+      const url = `https://bible.helloao.org/api/${translationId}/${selectedBook.id}/${chapter}.json`;
       const res = await fetch(url);
       const data = await res.json();
       setVerses(data.chapter?.verses || []);
