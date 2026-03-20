@@ -1,0 +1,8 @@
+
+{
+  "name": "FiNexus – Sistema Financeiro Inteligente",
+  "description": "Um sistema completo de controle financeiro para empreendedores, integrando gestão de despesas anuais (CDD), pagamentos mensais (CDP), investimentos e análise por IA para separação de finanças pessoais e profissionais.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
