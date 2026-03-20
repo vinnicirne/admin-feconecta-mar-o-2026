@@ -25,10 +25,10 @@ export default function BiblePage() {
   const [loading, setLoading] = useState(false);
   const [selectedVerses, setSelectedVerses] = useState<number[]>([]);
 
-  const translationId = "por_onbv"; // Nova Bíblia Viva
+  const translationId = "por_onbv"; 
   const primaryColor = "var(--primary)";
 
-  // 1. Carregar lista de livros ao iniciar
+  // 1. Carregar lista de livros
   useEffect(() => {
     fetchBooks();
   }, []);
@@ -41,7 +41,7 @@ export default function BiblePage() {
       const data = await res.json();
       setAllBooks(data.books || []);
     } catch (err) {
-      console.error("ERRO AO CARREGAR LIVROS:", err);
+      console.error("ERRO BOOKS:", err);
     } finally {
       setLoading(false);
     }
@@ -60,16 +60,17 @@ export default function BiblePage() {
       const url = `https://bible.helloao.org/api/${translationId}/${selectedBook.id}/${chapter}.json`;
       const res = await fetch(url);
       const data = await res.json();
-      setVerses(data.chapter?.verses || []);
+      // O conteúdo real fica em data.chapter.content
+      setVerses(data.chapter?.content || []);
+      setSelectedVerses([]);
       window.scrollTo(0, 0);
     } catch (err) {
-      console.error("ERRO AO CARREGAR CAPÍTULO:", err);
+      console.error("ERRO CHAPTER:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filtragem (Livros 1-39 são Antigo Testamento, 40-66 são Novo)
   const currentBooks = allBooks.filter(b => {
     const isNew = b.order > 39;
     const matchesTestament = testament === "old" ? !isNew : isNew;
@@ -179,26 +180,37 @@ export default function BiblePage() {
         )}
 
         {view === "reading" && selectedBook && (
-          <article style={{ lineHeight: 2, fontSize: "1.15rem", fontFamily: "serif" }}>
+          <article style={{ lineHeight: 1.8, fontSize: "1.15rem", fontFamily: "serif", color: "#1f2937" }}>
              <h3 style={{ fontFamily: "sans-serif", fontWeight: 900, fontSize: "28px", marginBottom: 32 }}>{selectedBook.name} {chapter}</h3>
              
              {loading ? (
                 <div style={{ textAlign: "center", padding: 60 }}><Sparkles className="spin" color={primaryColor} /></div>
              ) : (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "0 8px" }}>
-                  {verses.map((v: any) => (
-                    <span 
-                      key={v.number} 
-                      onClick={() => setSelectedVerses(prev => prev.includes(v.number) ? prev.filter(x => x !== v.number) : [...prev, v.number])}
-                      style={{ 
-                        padding: "2px 4px", borderRadius: "6px",
-                        background: selectedVerses.includes(v.number) ? "var(--primary-soft)" : "transparent"
-                      }}
-                    >
-                      <sup style={{ color: primaryColor, fontWeight: 900, marginRight: 5 }}>{v.number}</sup>
-                      {v.content}
-                    </span>
-                  ))}
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {verses.map((item: any, idx) => {
+                    const text = Array.isArray(item.content) ? item.content.join("") : item.content;
+                    
+                    if (item.type === "heading") {
+                      return <h4 key={idx} style={{ fontFamily: "sans-serif", fontWeight: 800, fontSize: "1.1rem", marginTop: 24, marginBottom: 8, color: "#4b5563" }}>{text}</h4>;
+                    }
+
+                    const isSelected = selectedVerses.includes(item.number);
+
+                    return (
+                      <span 
+                        key={idx} 
+                        onClick={() => setSelectedVerses(prev => isSelected ? prev.filter(x => x !== item.number) : [...prev, item.number])}
+                        style={{ 
+                          padding: "4px 8px", borderRadius: "8px", cursor: "pointer",
+                          background: isSelected ? "var(--primary-soft)" : "transparent",
+                          transition: "0.2s"
+                        }}
+                      >
+                        <sup style={{ color: primaryColor, fontWeight: 900, marginRight: 8, fontSize: "0.75rem" }}>{item.number}</sup>
+                        {text}
+                      </span>
+                    );
+                  })}
                 </div>
              )}
           </article>
