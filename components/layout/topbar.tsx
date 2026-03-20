@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from 'next/link';
 
-export function Topbar() {
+export function Topbar({ user }: { user?: any }) {
   return (
     <header 
       className="card topbar" 
