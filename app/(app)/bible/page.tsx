@@ -188,10 +188,24 @@ export default function BiblePage() {
              ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {verses.map((item: any, idx) => {
-                    const text = Array.isArray(item.content) ? item.content.join("") : item.content;
-                    
+                    // Função auxiliar para renderizar o conteúdo (pode conter strings ou objetos wordsOfJesus)
+                    const renderContent = (content: any) => {
+                      if (!Array.isArray(content)) return content;
+                      return content.map((segment: any, sIdx: number) => {
+                        if (typeof segment === "string") return segment;
+                        if (segment.type === "wordsOfJesus") {
+                          return (
+                            <span key={sIdx} style={{ color: primaryColor, fontWeight: 700 }}>
+                              {Array.isArray(segment.content) ? segment.content.join("") : segment.content}
+                            </span>
+                          );
+                        }
+                        return segment.content;
+                      });
+                    };
+
                     if (item.type === "heading") {
-                      return <h4 key={idx} style={{ fontFamily: "sans-serif", fontWeight: 800, fontSize: "1.1rem", marginTop: 24, marginBottom: 8, color: "#4b5563" }}>{text}</h4>;
+                      return <h4 key={idx} style={{ fontFamily: "sans-serif", fontWeight: 800, fontSize: "1.1rem", marginTop: 24, marginBottom: 8, color: "#4b5563" }}>{renderContent(item.content)}</h4>;
                     }
 
                     const isSelected = selectedVerses.includes(item.number);
@@ -207,7 +221,7 @@ export default function BiblePage() {
                         }}
                       >
                         <sup style={{ color: primaryColor, fontWeight: 900, marginRight: 8, fontSize: "0.75rem" }}>{item.number}</sup>
-                        {text}
+                        {renderContent(item.content)}
                       </span>
                     );
                   })}
