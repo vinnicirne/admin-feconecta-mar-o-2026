@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { 
   Heart, 
   MessageSquare, 
@@ -21,9 +21,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-export default function ProfilePage({ params }: { params: { username: string } }) {
+export default function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const resolvedParams = use(params);
   const [isFollowing, setIsFollowing] = useState(false);
-  const userUsername = params.username || "marcos_silva";
+  const userUsername = resolvedParams.username || "marcos_silva";
 
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 0 120px", background: "white" }}>
