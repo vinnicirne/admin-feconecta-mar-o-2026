@@ -1,6 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "./supabase/client";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Exportamos uma instância singleton para compatibilidade com o código legado que usa 'import { supabase }'
+// O createClient() no diretório supabase/client.ts já garante que seja um singleton real
+export const supabase = createClient();

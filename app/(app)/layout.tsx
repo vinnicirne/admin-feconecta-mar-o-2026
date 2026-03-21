@@ -24,7 +24,7 @@ import { PostCreator } from "@/components/app/feed/post-creator";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = createClient();
   const pathname = usePathname();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -39,10 +39,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => { 
     setMounted(true); 
     if (!supabase) return;
-    
-    const initAuth = async () => {
-      setLoading(true);
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    // O onAuthStateChange do Supabase v2 dispara imediatamente com a sessão atual
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+      const authUser = session?.user || null;
       setUser(authUser);
       
       // 🛡️ GUARDA DE NAVEGAÇÃO
@@ -54,17 +54,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       
       setLoading(false);
       fetchFeatures();
-    };
-
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-      const newUser = session?.user || null;
-      setUser(newUser);
-      
-      if (!isAuthPage && !newUser) {
-        router.push("/login");
-      }
     });
 
     return () => {
