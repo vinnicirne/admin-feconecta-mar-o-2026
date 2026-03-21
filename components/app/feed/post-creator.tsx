@@ -48,6 +48,7 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
   
   // ⚡ REELS EDITS
   const [trimRange, setTrimRange] = useState({ start: 0, end: 15 });
+  const [duration, setDuration] = useState(15);
   const [overlayText, setOverlayText] = useState("");
   const [textPos, setTextPos] = useState({ x: 50, y: 50 });
   const [bgMusic, setBgMusic] = useState<string | null>(null);
@@ -63,6 +64,31 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
   useEffect(() => {
     if (forceExpanded || initialCitation) setIsExpanded(true);
   }, [forceExpanded, initialCitation]);
+
+  // 🔄 REELS PREVIEW LOOP PROFISSIONAL (requestAnimationFrame)
+  useEffect(() => {
+    let raf: number;
+    const loop = () => {
+      const vid = previewVideoRef.current;
+      if (vid && !vid.paused) {
+        if (vid.currentTime >= trimRange.end) {
+          vid.currentTime = trimRange.start;
+          if (audioRef.current) audioRef.current.currentTime = 0;
+        }
+      }
+      raf = requestAnimationFrame(loop);
+    };
+
+    if (videoUrl) raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [videoUrl, trimRange]);
+
+  // 🎯 SEEK IMEDIATO AO CORTAR
+  useEffect(() => {
+    if (previewVideoRef.current) {
+      previewVideoRef.current.currentTime = trimRange.start;
+    }
+  }, [trimRange.start]);
 
   const [isDragging, setIsDragging] = useState(false);
   
@@ -376,14 +402,15 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
                ref={previewVideoRef} 
                src={videoUrl} 
                loop autoPlay muted
-               onPlay={() => audioRef.current?.play()}
-               onPause={() => audioRef.current?.pause()}
-               onTimeUpdate={() => {
-                  if (previewVideoRef.current && previewVideoRef.current.currentTime > trimRange.end) {
-                    previewVideoRef.current.currentTime = trimRange.start;
-                    if (audioRef.current) audioRef.current.currentTime = 0;
+               onLoadedMetadata={() => {
+                  if (previewVideoRef.current) {
+                    const dur = previewVideoRef.current.duration;
+                    setDuration(dur);
+                    setTrimRange({ start: 0, end: dur });
                   }
                }}
+               onPlay={() => audioRef.current?.play()}
+               onPause={() => audioRef.current?.pause()}
                style={{ width: "100%", borderRadius: 16 }} 
              />
              <div 
@@ -399,13 +426,13 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
 
           <div style={{ padding: "16px 8px" }}>
              <div style={{ display: "flex", justifyContent: "space-between", color: "white", fontSize: 11, fontWeight: 800, marginBottom: 8, opacity: 0.7 }}>
-                <span>⏱️ CORTE (TRIM)</span>
-                <span onClick={() => { setVideoUrl(null); setBgMusic(null); }} style={{ color: "#ef4444", cursor: "pointer" }}>Remover Vídeo</span>
+                <span>⏱️ CORTE PRECISO: {trimRange.start?.toFixed(1)}s - {trimRange.end?.toFixed(1)}s</span>
+                <span onClick={() => { setVideoUrl(null); setBgMusic(null); }} style={{ color: "#ef4444", cursor: "pointer" }}>Remover</span>
              </div>
              <div style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(255,255,255,0.05)", padding: 12, borderRadius: 12 }}>
-                <input type="range" min="0" max="15" value={trimRange.start} onChange={(e) => setTrimRange(prev => ({ ...prev, start: Math.min(Number(e.target.value), trimRange.end - 1) }))} style={{ flex: 1, accentColor: colors.primaryLight }} />
+                <input type="range" min="0" max={duration} step="0.1" value={trimRange.start} onChange={(e) => setTrimRange(prev => ({ ...prev, start: Math.min(Number(e.target.value), trimRange.end - 0.5) }))} style={{ flex: 1, accentColor: colors.primaryLight }} />
                 <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.2)" }}></div>
-                <input type="range" min="0" max="15" value={trimRange.end} onChange={(e) => setTrimRange(prev => ({ ...prev, end: Math.max(Number(e.target.value), trimRange.start + 1) }))} style={{ flex: 1, accentColor: colors.primaryLight }} />
+                <input type="range" min="0" max={duration} step="0.1" value={trimRange.end} onChange={(e) => setTrimRange(prev => ({ ...prev, end: Math.max(Number(e.target.value), trimRange.start + 0.5) }))} style={{ flex: 1, accentColor: colors.primaryLight }} />
              </div>
 
              <div style={{ marginTop: 20, display: "flex", gap: 10, alignItems: "center" }}>
