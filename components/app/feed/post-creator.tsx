@@ -61,6 +61,16 @@ export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { for
   const audioChunks = useRef<Blob[]>([]);
   const videoChunks = useRef<Blob[]>([]);
 
+  const resetForm = () => {
+    setText(initialCitation ?? "");
+    setMedia(null);
+    setAudioUrl(null);
+    setVideoUrl(null);
+    setOverlayText("");
+    setStyles({ bold: false, italic: false });
+    setIsExpanded(forceExpanded || !!initialCitation || false);
+  };
+
   useEffect(() => {
     if (forceExpanded || initialCitation) setIsExpanded(true);
   }, [forceExpanded, initialCitation]);
@@ -200,6 +210,25 @@ export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { for
     ? "linear-gradient(135deg, #059669 0%, #064e3b 100%)" 
     : "radial-gradient(circle at top right, rgba(255,255,255,0.15), transparent), radial-gradient(circle at bottom left, #064e3b, #022c22)";
 
+  const uploadToStorage = async (url: string, extension: string, contentType: string) => {
+    try {
+      const blob = await fetch(url).then(r => r.blob());
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
+      
+      const { data, error } = await supabase.storage
+        .from('post-media')
+        .upload(fileName, blob, { contentType, upsert: true });
+
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage.from('post-media').getPublicUrl(fileName);
+      return publicUrl;
+    } catch (err) {
+      console.error("ERRO UPLOAD STORAGE:", err);
+      throw err;
+    }
+  };
+
   const handlePublish = async () => {
     if (!text.trim() && !media && !audioUrl && !videoUrl) {
       alert("Escreva algo ou adicione uma mídia para edificar a comunidade 🙏");
@@ -207,8 +236,21 @@ export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { for
     }
     setIsPublishing(true);
     try {
-      let finalFileUrl = media?.url || audioUrl || null;
+      let finalFileUrl = null;
       let finalMediaType = media?.type || (videoUrl ? 'video' : (audioUrl ? 'audio' : 'text'));
+
+      // 📤 UPLOAD DE IMAGEM
+      if (media?.url && media.url.startsWith('blob:')) {
+        finalFileUrl = await uploadToStorage(media.url, 'png', 'image/png');
+      } else if (media?.url) {
+        finalFileUrl = media.url;
+      }
+
+      // 📤 UPLOAD DE ÁUDIO
+      if (audioUrl && audioUrl.startsWith('blob:')) {
+        finalFileUrl = await uploadToStorage(audioUrl, 'webm', 'audio/webm');
+        finalMediaType = 'audio';
+      }
 
       // 🔥 PROCESSAMENTO REAL DE VÍDEO (PIPELINE REELS PRO)
       if (videoUrl && !media) {
@@ -260,14 +302,11 @@ export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { for
 
       if (!res.success) throw new Error(res.error);
 
-      setVideoUrl(null);
-      setOverlayText(null as any);
+      resetForm();
+      router.refresh();
+
       if (onSuccess) {
         onSuccess();
-      }
-      router.refresh();
-      if (!onSuccess) {
-         window.location.reload(); 
       }
     } catch (err: any) {
       alert(`Erro: ${err.message}`);

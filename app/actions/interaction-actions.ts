@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 export async function prayPostAction(postId: string) {
   try {
     const supabase = await createSupabaseServer();
+    if (!supabase) throw new Error("Supabase não configurado.");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Faça login para orar por este irmão 🙏");
 
@@ -34,6 +35,7 @@ export async function prayPostAction(postId: string) {
 export async function likePostAction(postId: string) {
   try {
     const supabase = await createSupabaseServer();
+    if (!supabase) throw new Error("Supabase não configurado.");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Faça login para reagir 🙏");
 
@@ -61,6 +63,7 @@ export async function likePostAction(postId: string) {
 export async function commentPostAction(postId: string, content: string, parentId?: string) {
   try {
     const supabase = await createSupabaseServer();
+    if (!supabase) throw new Error("Supabase não configurado.");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Faça login para comentar 🙏");
 
@@ -83,6 +86,7 @@ export async function commentPostAction(postId: string, content: string, parentI
 export async function updateCommentAction(commentId: string, content: string) {
   try {
     const supabase = await createSupabaseServer();
+    if (!supabase) throw new Error("Supabase não configurado.");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Não autorizado.");
 
@@ -103,6 +107,7 @@ export async function updateCommentAction(commentId: string, content: string) {
 export async function deleteCommentAction(commentId: string) {
   try {
     const supabase = await createSupabaseServer();
+    if (!supabase) throw new Error("Supabase não configurado.");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Não autorizado.");
 
@@ -123,6 +128,7 @@ export async function deleteCommentAction(commentId: string) {
 export async function followUserAction(targetProfileId: string) {
   try {
     const supabase = await createSupabaseServer();
+    if (!supabase) throw new Error("Supabase não configurado.");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Faça login para seguir pessoas 🙏");
     if (user.id === targetProfileId) return { success: true }; // Silently ignore self-follow

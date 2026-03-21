@@ -6,6 +6,7 @@ import { createSupabaseServer } from "@/lib/supabase-server";
 export async function createPostAction(postData: any) {
   try {
     const supabase = await createSupabaseServer();
+    if (!supabase) throw new Error("Supabase não configurado no servidor.");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado no Refúgio.");
 
@@ -25,6 +26,7 @@ export async function createPostAction(postData: any) {
 export async function getPostsAction() {
   try {
     const supabase = await createSupabaseServer();
+    if (!supabase) throw new Error("Supabase não configurado.");
     const { data: { user } } = await supabase.auth.getUser();
     
     // Filtro para interações do usuário atual
@@ -69,6 +71,7 @@ export async function getPostsAction() {
 export async function updatePostAction(postId: string, content: string) {
   try {
     const supabase = await createSupabaseServer();
+    if (!supabase) throw new Error("Supabase não configurado.");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Não autorizado.");
 
@@ -88,6 +91,7 @@ export async function updatePostAction(postId: string, content: string) {
 export async function deletePostAction(postId: string) {
   try {
     const supabase = await createSupabaseServer();
+    if (!supabase) throw new Error("Supabase não configurado.");
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Não autorizado.");
 

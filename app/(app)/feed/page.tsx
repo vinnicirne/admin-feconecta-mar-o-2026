@@ -176,14 +176,15 @@ function PostInteractions({ post }: { post: any }) {
     <div style={{ padding: "16px 24px", display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--line)", background: "white" }}>
         <div style={{ display: "flex", gap: 20 }}>
           <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 700, color: "var(--muted)" }}>
-              <Heart size={18} className="danger" /> <span style={{ color: "#ef4444" }}>128</span>
+              <Heart size={18} className={post.user_liked?.[0]?.count > 0 ? "danger" : ""} fill={post.user_liked?.[0]?.count > 0 ? "#ef4444" : "none"} color={post.user_liked?.[0]?.count > 0 ? "#ef4444" : "var(--muted)"} /> 
+              <span style={{ color: post.user_liked?.[0]?.count > 0 ? "#ef4444" : "inherit" }}>{post.like_count?.[0]?.count || 0}</span>
           </button>
           <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 700, color: "var(--muted)" }}>
-              <MessageSquare size={18} /> 34
+              <MessageSquare size={18} /> {post.comment_count?.[0]?.count || 0}
           </button>
           {isOracao && (
             <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 800, color: "var(--primary)" }}>
-                🙏 <span style={{ textDecoration: "underline" }}>12 orando</span>
+                🙏 <span style={{ textDecoration: "underline" }}>{post.prayer_count ? `${post.prayer_count[0]?.count} orando` : "0 orando"}</span>
             </button>
           )}
         </div>
