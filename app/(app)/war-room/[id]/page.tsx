@@ -71,7 +71,7 @@ function WarRoomPageInner() {
             time: new Date(p.new.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
           };
 
-          supabase.from("profiles").select("full_name").eq("id", p.new.profile_id).single().then(({data}) => {
+          supabase.from("profiles").select("full_name").eq("id", p.new.profile_id).single().then(({data}: any) => {
             if (data?.full_name) {
               setMessages(current => current.map(m => m.id === p.new.id ? { ...m, author: data.full_name } : m));
             }
@@ -317,7 +317,21 @@ function WarRoomPageInner() {
                 </div>
               ))}
             </div>
-            <form onSubmit={handleSendMessage} style={{ padding: 20, background: "var(--line)" }}>
+            <div style={{ display: "flex", gap: 16, padding: "12px 20px", borderTop: "1px solid var(--line)", background: "var(--line)", justifyContent: "center" }}>
+              {["🙏", "❤️", "🔥", "🙌"].map(emoji => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => addReaction(emoji)}
+                  style={{ fontSize: 24, background: "none", border: 0, cursor: "pointer", transition: "transform 0.2s" }}
+                  title="Enviar Reação"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+
+            <form onSubmit={handleSendMessage} style={{ padding: "0 20px 20px", background: "var(--line)" }}>
               <input value={chatMsg} onChange={e => setChatMsg(e.target.value)} placeholder="Escreva uma oração..." style={{ width: "100%", padding: 12, borderRadius: 12, border: 0, outline: "none" }} />
             </form>
           </div>
