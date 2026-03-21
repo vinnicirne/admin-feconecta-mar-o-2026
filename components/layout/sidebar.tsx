@@ -24,7 +24,7 @@ import { useSidebar } from "./sidebar-context";
 
 export function Sidebar({ user }: { user: any }) {
   const pathname = usePathname();
-  const { isCollapsed, toggleSidebar } = useSidebar();
+  const { isCollapsed, isMobileMenuOpen, toggleSidebar, closeMobileMenu } = useSidebar();
 
   const menuSections = [
     {
@@ -61,25 +61,46 @@ export function Sidebar({ user }: { user: any }) {
   ];
 
   return (
-    <aside 
-      className="card sidebar" 
-      style={{ 
-        height: "calc(100vh - 40px)",
-        width: isCollapsed ? 80 : 280,
-        margin: 20,
-        padding: isCollapsed ? "20px 10px" : "24px 16px",
-        display: "flex",
-        flexDirection: "column",
-        transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-        position: "fixed",
-        left: 0,
-        zIndex: 100,
-        overflowY: "auto",
-        overflowX: "hidden",
-        border: "1px solid var(--line)",
-        scrollbarWidth: "none"
-      }}
-    >
+    <>
+      {/* 🔴 OVERLAY MOBILE */}
+      {isMobileMenuOpen && (
+        <div 
+          onClick={closeMobileMenu}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 998 }}
+          className="mobile-overlay"
+        />
+      )}
+
+      <aside 
+        className="card sidebar" 
+        style={{ 
+          height: "calc(100vh - 40px)",
+          width: isCollapsed ? 80 : 280,
+          margin: 20,
+          padding: isCollapsed ? "20px 10px" : "24px 16px",
+          display: "flex",
+          flexDirection: "column",
+          transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+          position: "fixed",
+          left: 0,
+          zIndex: 1000, // Acima do overlay
+          overflowY: "auto",
+          overflowX: "hidden",
+          border: "1px solid var(--line)",
+          scrollbarWidth: "none",
+          transform: isMobileMenuOpen ? "translateX(0)" : "translateX(-150%)"
+        }}
+      >
+        {/* Adicionar CSS Mobile First para Sidebar */}
+        <style jsx>{`
+          @media (min-width: 1024px) {
+            .sidebar { transform: translateX(0) !important; }
+            .mobile-overlay { display: none !important; }
+          }
+          @media (max-width: 1024px) {
+            .sidebar { margin: 20px 0 20px 20px !important; }
+          }
+        `}</style>
       {/* Botão de Toggle - Topo */}
       <button
         onClick={toggleSidebar}
@@ -214,5 +235,6 @@ export function Sidebar({ user }: { user: any }) {
         )}
       </div>
     </aside>
+    </>
   );
 }

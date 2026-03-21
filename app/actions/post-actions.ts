@@ -8,9 +8,12 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 export async function createPostAction(postData: any) {
   try {
+    const { data: { user } } = await supabaseServer.auth.getUser();
+    if (!user) throw new Error("Usuário não autenticado no Refúgio.");
+
     const { data, error } = await supabaseServer
       .from('posts')
-      .insert([postData])
+      .insert([{ ...postData, profile_id: user.id }])
       .select();
 
     if (error) throw error;
@@ -25,7 +28,7 @@ export async function getPostsAction() {
   try {
     const { data, error } = await supabaseServer
       .from('posts')
-      .select('*, profiles(full_name, username)')
+      .select('*, profiles!profile_id(full_name, username)')
       .order('created_at', { ascending: false });
 
     if (error) throw error;

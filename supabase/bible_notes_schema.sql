@@ -50,6 +50,11 @@ CREATE POLICY "Marca-texto Pessoal" ON public.bible_highlights
 FOR ALL TO authenticated
 USING (auth.uid() = profile_id);
 
+CREATE POLICY "Favoritos Pessoais" ON public.bible_favorites
+FOR ALL TO authenticated
+USING (auth.uid() = profile_id);
+
 GRANT ALL ON public.user_notes TO authenticated;
 GRANT ALL ON public.bible_highlights TO authenticated;
 GRANT ALL ON public.bible_favorites TO authenticated;
+ALTER TABLE public.user_notes ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN DEFAULT false;
