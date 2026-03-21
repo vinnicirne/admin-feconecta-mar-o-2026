@@ -99,7 +99,7 @@ function WarRoomPageInner() {
         const activeUsers = Object.values(state).flat() as any[];
         setParticipants(activeUsers);
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({ 
             user_id: currentUser.id, 
@@ -144,7 +144,7 @@ function WarRoomPageInner() {
         
         const { data: msgs } = await supabase.from("prayer_room_messages").select("*, profiles(full_name)").eq("room_id", id).order('created_at', { ascending: true }).limit(50);
         if (msgs) {
-          setMessages(msgs.map(m => ({
+          setMessages(msgs.map((m: any) => ({
             id: m.id,
             text: m.text,
             author: m.profiles?.full_name || "Membro",
@@ -304,7 +304,7 @@ function WarRoomPageInner() {
           <div className="card" style={{ display: "flex", flexDirection: "column", height: 500, borderRadius: 32 }}>
             <div style={{ padding: 20, borderBottom: "1px solid var(--line)" }}><strong>Chat ao Vivo</strong></div>
             <div ref={chatScrollRef} style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-              {messages.map((m, i) => (
+              {messages.map((m: any, i: number) => (
                 <div key={i} style={{ display: "flex", gap: 10 }}>
                   <div style={{ width: 32, height: 32, background: "var(--line)", borderRadius: 8, display: "grid", placeItems: "center" }}>🙏</div>
                   <div>
