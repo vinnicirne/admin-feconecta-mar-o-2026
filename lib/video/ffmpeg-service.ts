@@ -3,9 +3,18 @@ import ffmpegPath from "ffmpeg-static";
 import path from "path";
 import fs from "fs";
 
-// Configuração do caminho do FFmpeg Binário
-if (ffmpegPath) {
-  ffmpeg.setFfmpegPath(ffmpegPath);
+// Configuração robusta do caminho do FFmpeg Binário no Windows/Next.js
+const getFFmpegPath = () => {
+  // Tentar o caminho direto do node_modules se o static falhar/mudar
+  const nodeModulesPath = path.resolve(process.cwd(), "node_modules", "ffmpeg-static", "ffmpeg.exe");
+  if (fs.existsSync(nodeModulesPath)) return nodeModulesPath;
+  return ffmpegPath; // Fallback para o padrão
+};
+
+const finalPath = getFFmpegPath();
+console.log("🛠️ FFmpeg Path:", finalPath);
+if (finalPath) {
+  ffmpeg.setFfmpegPath(finalPath);
 }
 
 export interface ProcessVideoParams {
@@ -39,19 +48,9 @@ export function processVideo({
       const xPos = `(w*${textPos.x/100})`;
       const yPos = `(h*${textPos.y/100})`;
       
-      command = command.videoFilters({
-        filter: 'drawtext',
-        options: {
-          text: text,
-          fontcolor: 'white',
-          fontsize: 42,
-          x: xPos,
-          y: yPos,
-          box: 1,
-          boxcolor: 'black@0.4',
-          boxborderw: 10
-        }
-      });
+      command = command.videoFilters(
+        `drawtext=text='${text}':fontcolor=white:fontsize=42:x=${xPos}:y=${yPos}:box=1:boxcolor=black@0.4:boxborderw=10`
+      );
     }
 
     // 3. Compressão e Formato MP4 (H.264 para máxima compatibilidade)
@@ -65,8 +64,8 @@ export function processVideo({
       ])
       .save(outputPath)
       .on("end", () => resolve(outputPath))
-      .on("error", (err) => {
-        console.error("FFmpeg Error:", err);
+      .on("error", (err: Error) => {
+        console.error("FFmpeg Processing Error:", err.message);
         reject(err);
       });
   });
