@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import { 
   Heart, 
   MessageSquare, 
@@ -19,7 +19,7 @@ import {
 import Link from "next/link";
 
 export default function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const resolvedParams = use(params);
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
@@ -33,6 +33,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
   }, [resolvedParams.username]);
 
   const fetchProfileData = async () => {
+    if (!supabase) return;
     setLoading(true);
     try {
       let targetUsername = resolvedParams.username;

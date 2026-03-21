@@ -241,7 +241,7 @@ export default function BiblePage() {
       const res  = await fetch(`https://bible.helloao.org/api/${translationId}/books.json`);
       const data = await res.json();
       setAllBooks(data.books || []);
-    } catch (err) { console.error("ERRO BOOKS:", err); }
+    } catch (err: any) { console.error("ERRO BOOKS:", err); }
     finally { setLoading(false); }
   };
 
@@ -315,8 +315,8 @@ export default function BiblePage() {
         .eq("profile_id", user.id)
         .eq("book_id", selectedBook.id)
         .eq("chapter", chapter);
-      if (data) setFavorites(new Set(data.map(f => f.verse)));
-    } catch (err) { console.error("ERRO FAVORITOS:", err); }
+      if (data) setFavorites(new Set(data.map((f: any) => f.verse)));
+    } catch (err: any) { console.error("ERRO FAVORITOS:", err); }
   };
 
   const fetchVerseNotes = async () => {
@@ -333,7 +333,7 @@ export default function BiblePage() {
         .eq("chapter", chapter);
       
       const notedSet = new Set<number>();
-      data?.forEach(n => {
+      data?.forEach((n: any) => {
         if (Array.isArray(n.verses)) n.verses.forEach((v: number) => notedSet.add(v));
       });
       setVerseNotes(notedSet);
@@ -348,12 +348,12 @@ export default function BiblePage() {
         .eq("chapter", chapter);
       
       const commentedSet = new Set<number>();
-      comments?.forEach(c => {
+      comments?.forEach((c: any) => {
         if (Array.isArray(c.verses)) c.verses.forEach((v: number) => commentedSet.add(v));
       });
       setVerseComments(commentedSet);
       setCommentsData(comments || []);
-    } catch (err) { console.error("ERRO FETCH INDICATOR:", err); }
+    } catch (err: any) { console.error("ERRO FETCH INDICATOR:", err); }
   };
 
   const scrollToVerse = (vNum?: number) => {
@@ -468,7 +468,7 @@ export default function BiblePage() {
         return next;
       });
       setSelectedVerses([]);
-    } catch (err) { console.error("ERRO REMOVER HIGHLIGHT:", err); }
+    } catch (err: any) { console.error("ERRO REMOVER HIGHLIGHT:", err); }
   };
 
   // ── Busca de palavras ────────────────────────────────

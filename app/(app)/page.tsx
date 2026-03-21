@@ -100,6 +100,11 @@ export default function FeedPage() {
     fetchPosts();
     checkUser();
 
+    if (!supabase) {
+      console.warn("Supabase client não disponível (Build Time?)");
+      return;
+    }
+
     // 🔄 REALTIME SUBSCRIPTION
     const channel = supabase
       .channel('schema-db-changes')
@@ -109,7 +114,7 @@ export default function FeedPage() {
       .on('postgres_changes', { event: '*', table: 'posts', schema: 'public' }, () => fetchPosts(false))
       .subscribe();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       if (session) {
         setUser(session.user);
         setAuthMode(null);
@@ -125,6 +130,7 @@ export default function FeedPage() {
   }, [supabase]);
 
   const checkUser = async () => {
+    if (!supabase) return;
     const { data } = await supabase.auth.getUser();
     setUser(data.user);
   };
@@ -502,8 +508,10 @@ function CommentItem({ comment, post, onRefresh, isReply = false }: { comment: a
   const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setCurrentUser(data.user));
-  }, []);
+    if (supabase) {
+      supabase.auth.getUser().then(({ data }: any) => setCurrentUser(data.user));
+    }
+  }, [supabase]);
 
   const handleReplyBtnClick = () => {
     setShowReplyInput(!showReplyInput);

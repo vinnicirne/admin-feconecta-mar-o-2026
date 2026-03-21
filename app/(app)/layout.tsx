@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Home, 
   Search, 
@@ -21,7 +21,7 @@ import { PostCreator } from "@/components/app/feed/post-creator";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const pathname = usePathname();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -31,16 +31,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { 
     setMounted(true); 
+    if (!supabase) return;
+    
     checkUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       setUser(session?.user || null);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabase]);
 
   const checkUser = async () => {
+    if (!supabase) return;
     const { data } = await supabase.auth.getUser();
     setUser(data.user);
   };

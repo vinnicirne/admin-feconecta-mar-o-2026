@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useMemo } from "react";
 import { 
   Plus, Search, Tag, Calendar, BookOpen, Star, ChevronRight, ArrowLeft, Save, Sparkles, Lock, Globe, Trash2
 } from "lucide-react";
@@ -16,7 +16,7 @@ function NotesContent() {
   const [isSaving, setIsSaving] = useState(false);
   const searchParams = useSearchParams();
   
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   // Estados do Editor
   const [currentNote, setCurrentNote] = useState({ 
@@ -60,6 +60,7 @@ function NotesContent() {
   }, [view]);
 
   const fetchNotes = async () => {
+    if (!supabase) return;
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -95,7 +96,7 @@ function NotesContent() {
   };
 
   const saveNote = async () => {
-    if (!currentNote.content) return;
+    if (!currentNote.content || !supabase) return;
     try {
       setIsSaving(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -134,7 +135,7 @@ function NotesContent() {
   };
 
   const deleteNote = async () => {
-    if (!editingId) return;
+    if (!editingId || !supabase) return;
     if (!confirm("Tem certeza que deseja excluir esta nota?")) return;
     try {
       const { error } = await supabase.from('user_notes').delete().eq('id', editingId);
@@ -149,6 +150,7 @@ function NotesContent() {
 
   const toggleNoteFavorite = async (e: React.MouseEvent, note: any) => {
     e.stopPropagation();
+    if (!supabase) return;
     try {
       const nextFav = !note.is_favorite;
       const { error } = await supabase.from('user_notes').update({ is_favorite: nextFav }).eq('id', note.id);
