@@ -333,7 +333,7 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
         
         {isCameraActive ? (
           <div style={{ position: "relative", marginBottom: 12 }}>
-            <video ref={videoRef} style={{ width: "100%", borderRadius: 16, background: "black" }} />
+            <video ref={videoRef} muted playsInline style={{ width: "100%", borderRadius: 16, background: "black" }} />
             
             <button onClick={toggleCamera} style={{ position: "absolute", top: 10, left: 10, background: "rgba(0,0,0,0.5)", border: 0, borderRadius: "50%", width: 34, height: 34, color: "white", display: "grid", placeItems: "center" }}><RefreshCcw size={18} /></button>
 
