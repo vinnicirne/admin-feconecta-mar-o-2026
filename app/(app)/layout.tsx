@@ -195,7 +195,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
               
               <div onClick={(e) => e.stopPropagation()}>
-                 <PostCreator forceExpanded />
+                 <PostCreator forceExpanded onSuccess={() => setIsCreateModalOpen(false)} />
               </div>
            </div>
         </div>

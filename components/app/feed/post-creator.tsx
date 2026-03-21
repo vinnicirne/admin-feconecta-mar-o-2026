@@ -30,9 +30,9 @@ const colors = {
   text: "#064e3b",
 };
 
-export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?: boolean; initialCitation?: string }) {
+export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { forceExpanded?: boolean; initialCitation?: string, onSuccess?: () => void }) {
   const [isExpanded, setIsExpanded] = useState(forceExpanded || !!initialCitation || false);
-  const [postType, setPostType] = useState<PostType>("oracao");
+  const [postType, setPostType] = useState<PostType>("compartilhar");
   const [text, setText] = useState(initialCitation ?? "");
   const [isPublishing, setIsPublishing] = useState(false);
   const router = useRouter();
@@ -260,12 +260,15 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
 
       if (!res.success) throw new Error(res.error);
 
-      setText("");
-      setIsExpanded(false);
       setVideoUrl(null);
-      setOverlayText("");
+      setOverlayText(null as any);
+      if (onSuccess) {
+        onSuccess();
+      }
       router.refresh();
-      window.location.reload(); 
+      if (!onSuccess) {
+         window.location.reload(); 
+      }
     } catch (err: any) {
       alert(`Erro: ${err.message}`);
     } finally {
@@ -310,11 +313,13 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: colors.text }}>Novo Post</h3>
          <button 
            onClick={handlePublish} 
-           disabled={isPublishing || (!text && !media && !audioUrl)} 
+           disabled={isPublishing || (!text.trim() && !media && !audioUrl && !videoUrl)} 
            style={{ 
              background: colors.primary, color: "white", border: 0, borderRadius: 10, 
              padding: "8px 20px", fontWeight: 700, fontSize: 14,
-             opacity: (isPublishing || (!text && !media && !audioUrl)) ? 0.6 : 1
+             opacity: (isPublishing || (!text.trim() && !media && !audioUrl && !videoUrl)) ? 0.3 : 1,
+             cursor: (isPublishing || (!text.trim() && !media && !audioUrl && !videoUrl)) ? 'not-allowed' : 'pointer',
+             transition: "opacity 0.2s"
            }}
          >
            {isPublishing ? <Loader2 size={18} className="spin" /> : "Publicar"}
