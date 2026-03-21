@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 
 export function LoginForm() {
@@ -11,8 +11,10 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const pathname = usePathname();
 
-  const isAdminLogin = typeof window !== 'undefined' && window.location.pathname.includes('/admin-login');
+  const isAdminLogin = pathname.includes('/admin-login');
+  const isFeed = !pathname.includes('/dashboard');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,6 +23,12 @@ export function LoginForm() {
 
     try {
       const supabase = createClient();
+      if (!supabase) {
+        setError("Erro: Cliente Supabase não pôde ser inicializado.");
+        setLoading(false);
+        return;
+      }
+
       const { error: authError, data } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -59,8 +67,6 @@ export function LoginForm() {
       setLoading(false);
     }
   };
-
-  const isFeed = typeof window !== 'undefined' && !window.location.pathname.includes('/dashboard');
 
   return (
     <form

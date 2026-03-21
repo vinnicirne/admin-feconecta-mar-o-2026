@@ -76,6 +76,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setUser(data.user);
   };
 
+  // 💡 NAVEGAÇÃO SEGURA (Prevenir Hydration Mismatch)
+  const menuItems = useMemo(() => {
+    const baseItems = [
+      { id: 'feed', label: "Feed", icon: Home, href: "/" },
+      { id: 'bible', label: "Bíblia", icon: BookOpen, href: "/bible" },
+      { id: 'post', label: "POST", icon: Plus, onClick: () => setIsCreateModalOpen(true), isFloating: true }, 
+      { id: 'notes', label: "Notas", icon: StickyNote, href: "/notes" },
+      { id: 'plans', label: "Planos", icon: Sparkles, href: "/plans" },
+    ];
+
+    // No SSR ou antes de montar, assumimos todos habilitados
+    if (!mounted || activeFeatures.size === 0) return baseItems;
+    
+    return baseItems.filter(item => activeFeatures.has(item.id));
+  }, [activeFeatures, mounted]);
+
   if (!mounted || loading) {
     if (isAuthPage) return <>{children}</>;
     return (
@@ -88,13 +104,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isAuthPage) return <>{children}</>;
 
-  const menuItems = [
-    { id: 'feed', label: "Feed", icon: Home, href: "/" },
-    { id: 'bible', label: "Bíblia", icon: BookOpen, href: "/bible" },
-    { id: 'post', label: "POST", icon: Plus, onClick: () => setIsCreateModalOpen(true), isFloating: true }, 
-    { id: 'notes', label: "Notas", icon: StickyNote, href: "/notes" },
-    { id: 'plans', label: "Planos", icon: Sparkles, href: "/plans" },
-  ].filter(item => activeFeatures.size === 0 || activeFeatures.has(item.id));
 
   return (
     <div className="app-container" style={{ minHeight: "100vh", background: "#f8fafc" }}>

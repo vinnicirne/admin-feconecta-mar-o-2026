@@ -15,27 +15,44 @@ let clientInstance: any = null;
 export function createClient() {
   const isBrowser = typeof window !== 'undefined';
   
-  // Singleton para o navegador
+  // Singleton para o navegador (Evita múltiplos clients e locks de auth)
   if (isBrowser && clientInstance) return clientInstance;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   
-  // 🛡️ BLOQUEIO DE CHAVES INVÁLIDAS
-  if (!url || !key || url.includes('placeholder') || key === 'placeholder') {
+  // 🛡️ VALIDAÇÃO DE CONFIGURAÇÃO
+  if (!url || !key) {
     if (isBrowser) {
-      console.error("❌ SUPABASE_URL ou ANON_KEY não configuradas ou são 'placeholder'!");
-      console.warn("Dica: Verifique seu arquivo .env ou reinicie o 'npm run dev'");
+      console.error("❌ ERRO CRÍTICO: Variáveis do Supabase ausentes!");
+      console.table({ 
+        URL: url ? "Configurada ✅" : "Ausente ❌", 
+        ANON_KEY: key ? "Configurada ✅" : "Ausente ❌" 
+      });
     }
-    // Retornamos um dummy nulo para evitar recursão infinita ou quebra de hooks
+    return null;
+  }
+
+  // 🛡️ BLOQUEIO DE CHAVES PLACEHOLDER
+  const isPlaceholder = url.includes('placeholder') || key.includes('placeholder') || key.length < 50;
+  if (isPlaceholder) {
+    if (isBrowser) {
+       console.error("❌ SUPABASE_URL ou ANON_KEY contêm placeholders ou são inválidas!");
+       console.warn("Valor detectado parece ser um placeholder ou chave incompleta.");
+    }
     return null;
   }
   
-  if (isBrowser) {
-    clientInstance = createBrowserClient(url, key);
-    return clientInstance;
+  try {
+    const client = createBrowserClient(url, key);
+    
+    if (isBrowser) {
+      clientInstance = client;
+    }
+    
+    return client;
+  } catch (err) {
+    console.error("❌ Erro ao criar cliente Supabase:", err);
+    return null;
   }
-  
-  // No servidor (SSR), o Next.js lida com a concorrência, retornamos nova instância
-  return createBrowserClient(url, key);
 }
