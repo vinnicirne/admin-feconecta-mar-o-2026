@@ -15,8 +15,10 @@ import {
   Trash2,
   CornerDownRight,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Mic2
 } from "lucide-react";
+import Link from "next/link";
 import { PostCreator } from "@/components/app/feed/post-creator";
 import { getPostsAction, deletePostAction, updatePostAction } from "@/app/actions/post-actions";
 import { LoginForm } from "@/components/auth/login-form";
@@ -299,7 +301,7 @@ function PostContent({ post, onRefresh }: { post: any, onRefresh: () => void }) 
         </div>
       )}
 
-      {isOracao && (
+      {isOracao && !post.metadata?.war_room_id && (
         <button
           onClick={async () => {
             const res = await prayPostAction(post.id);
@@ -316,6 +318,18 @@ function PostContent({ post, onRefresh }: { post: any, onRefresh: () => void }) 
         >
           {post.user_prayed?.[0]?.count > 0 ? "🙏 REMOVER" : "🙏 ORAR"}
         </button>
+      )}
+
+      {post.metadata?.war_room_id && (
+        <Link href={`/war-room/${post.metadata.war_room_id}`} style={{ 
+          display: "inline-flex", alignItems: "center", gap: 8, marginTop: 24, 
+          background: "white", color: "#0f766e", border: 0, 
+          borderRadius: 100, padding: "12px 32px", fontWeight: 900, fontSize: 14,
+          boxShadow: "0 10px 25px rgba(0,0,0,0.15)", textDecoration: "none",
+          transition: "0.2s"
+        }}>
+          <Mic2 size={18} /> ENTRAR NA SALA AGORA
+        </Link>
       )}
     </div>
   );

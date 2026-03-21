@@ -82,4 +82,10 @@ CREATE POLICY "Leader can update their community" ON public.communities FOR UPDA
 
 CREATE POLICY "Anyone can read prayer rooms" ON public.prayer_rooms FOR SELECT USING (true);
 CREATE POLICY "Authenticated users can create prayer rooms" ON public.prayer_rooms FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Host can update prayer room" ON public.prayer_rooms FOR UPDATE TO authenticated USING (host_id = auth.uid());
+-- 7. Habilitar Realtime para estas tabelas
+BEGIN;
+  DROP PUBLICATION IF EXISTS supabase_realtime;
+  CREATE PUBLICATION supabase_realtime;
+COMMIT;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.communities, public.prayer_rooms;
+

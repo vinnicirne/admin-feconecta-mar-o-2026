@@ -252,6 +252,45 @@ export function UserManagementPanel({ users: initialUsers }: UserManagementPanel
             </div>
           </div>
 
+          <div style={{ marginTop: 24, padding: 16, background: "rgba(15,118,110,0.05)", borderRadius: 14, border: "1px solid rgba(15,118,110,0.1)" }}>
+             <p style={{ margin: "0 0 12px", fontSize: 11, fontWeight: 900, color: "var(--primary)", textTransform: "uppercase" }}>Ação Rápida Ministerial</p>
+             {selectedUser.role !== 'admin' ? (
+                <button 
+                  className="button" 
+                  style={{ width: "100%", fontSize: 13, fontWeight: 800, padding: 12 }}
+                  onClick={async () => {
+                    if (!confirm(`Deseja realmente promover ${selectedUser.name} para ADMINISTRADOR GLOBAL?`)) return;
+                    setLoading(true);
+                    const { error } = await supabase.from('profiles').update({ role: 'admin' }).eq('id', selectedUser.id);
+                    if (!error) {
+                       setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, role: 'admin' } : u));
+                       alert("Membro promovido para Administrador com sucesso.");
+                    }
+                    setLoading(false);
+                  }}
+                >
+                  Promover a Administrador
+                </button>
+             ) : (
+                <button 
+                  className="button secondary" 
+                  style={{ width: "100%", fontSize: 13, fontWeight: 800, padding: 12 }}
+                  onClick={async () => {
+                    if (!confirm(`Deseja remover as permissões de admin de ${selectedUser.name}?`)) return;
+                    setLoading(true);
+                    const { error } = await supabase.from('profiles').update({ role: 'member' }).eq('id', selectedUser.id);
+                    if (!error) {
+                       setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, role: 'member' } : u));
+                       alert("Permissões de administrador removidas.");
+                    }
+                    setLoading(false);
+                  }}
+                >
+                  Remover Cargo Admin
+                </button>
+             )}
+          </div>
+
           <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 32 }}>
             <button className="button secondary" style={{ padding: 14, display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }} onClick={() => setIsEditModalOpen(true)}>
               <Edit size={16} /> Editar Perfil
@@ -327,6 +366,14 @@ export function UserManagementPanel({ users: initialUsers }: UserManagementPanel
                 <span className="muted" style={{ fontSize: 13, fontWeight: 700, display: "block", marginBottom: 6 }}>Data de Nascimento</span>
                 <input className="input" type="date" defaultValue={selectedUser.birthDate} id="edit-birth" />
               </label>
+              <label>
+                <span className="muted" style={{ fontSize: 13, fontWeight: 700, display: "block", marginBottom: 6 }}>Cargo / Papel Ministerial</span>
+                <select className="input" defaultValue={selectedUser.role} id="edit-role">
+                  <option value="member">Membro Intercessor</option>
+                  <option value="moderator">Moderador Regional</option>
+                  <option value="admin">Administrador Global</option>
+                </select>
+              </label>
               <label style={{ gridColumn: "1 / -1" }}>
                 <span className="muted" style={{ fontSize: 13, fontWeight: 700, display: "block", marginBottom: 6 }}>Biografia Ministerial</span>
                 <textarea className="input" style={{ minHeight: 80 }} defaultValue={selectedUser.bio} id="edit-bio" />
@@ -339,22 +386,23 @@ export function UserManagementPanel({ users: initialUsers }: UserManagementPanel
                       full_name: (document.getElementById('edit-name') as HTMLInputElement).value,
                       username: (document.getElementById('edit-username') as HTMLInputElement).value,
                       email: (document.getElementById('edit-email') as HTMLInputElement).value,
-                      church: (document.getElementById('edit-church') as HTMLInputElement).value,
-                      bio: (document.getElementById('edit-bio') as HTMLTextAreaElement).value,
-                      birth_date: (document.getElementById('edit-birth') as HTMLInputElement).value || undefined
-                   };
+                       church: (document.getElementById('edit-church') as HTMLInputElement).value,
+                       bio: (document.getElementById('edit-bio') as HTMLTextAreaElement).value,
+                       birth_date: (document.getElementById('edit-birth') as HTMLInputElement).value || undefined,
+                       role: (document.getElementById('edit-role') as HTMLSelectElement).value
+                    };
                    setLoading(true);
                    const { error } = await supabase.from('profiles').update(elements).eq('id', selectedUser.id);
                    if (!error) {
                       setUsers(prev => prev.map(u => u.id === selectedUser.id ? { 
                         ...u, 
                         name: elements.full_name, 
-                        username: elements.username, 
-                        email: elements.email, 
-                        church: elements.church, 
-                        bio: elements.bio,
-                        birthDate: elements.birth_date ? new Date(elements.birth_date).toLocaleDateString() : u.birthDate
-                      } : u));
+                        username: elements.username,                         email: elements.email, 
+                         church: elements.church, 
+                         bio: elements.bio,
+                         role: elements.role as any,
+                         birthDate: elements.birth_date ? new Date(elements.birth_date).toLocaleDateString() : u.birthDate
+                       } : u));
                       setIsEditModalOpen(false);
                       alert("Perfil ministerial atualizado globalmente.");
                    }

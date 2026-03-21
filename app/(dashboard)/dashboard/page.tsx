@@ -60,16 +60,22 @@ export default function DashboardPage() {
   };
 
   return (
-    <div style={{ padding: "40px", maxWidth: 1400, margin: "0 auto" }}>
+    <div style={{ padding: "20px 16px", maxWidth: 1400, margin: "0 auto" }}>
+      <style jsx>{`
+        @media (max-width: 768px) {
+          h1 { fontSize: 2rem !important; }
+          header { flex-direction: column !important; align-items: flex-start !important; gap: 20px !important; }
+        }
+      `}</style>
       
       {/* 🔴 HEADER DO MINISTÉRIO EXECUTIVO */}
-      <header style={{ marginBottom: 48, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+      <header style={{ marginBottom: 48, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap" }}>
         <div>
            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
               <Sparkles size={24} className="primary" />
               <span style={{ fontWeight: 800, textTransform: "uppercase", letterSpacing: 2, fontSize: 13, color: "var(--muted)" }}>Painel de Gestão Ministerial</span>
            </div>
-           <h1 style={{ fontSize: "2.8rem", fontWeight: 900, margin: 0, letterSpacing: "-1px" }}>Visão Geral do Refúgio</h1>
+           <h1 style={{ fontSize: "2.8rem", fontWeight: 900, margin: 0, letterSpacing: "-1px" }} className="title">Visão Geral do Refúgio</h1>
         </div>
         
         <div style={{ display: "flex", gap: 16 }}>
@@ -83,7 +89,7 @@ export default function DashboardPage() {
       </header>
 
       {/* 🔴 BENTO GRID DE MÉTRICAS REAIS (TIER 1) */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24, marginBottom: 40 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 24, marginBottom: 40 }}>
         <MetricCard 
           icon={Users} 
           label="Membros Reais" 
@@ -122,7 +128,7 @@ export default function DashboardPage() {
       <FeatureManager />
 
       {/* 🔴 ÁREA DE MONITORAMENTO DE EXPANSÃO */}
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
         <div className="card" style={{ padding: 40, borderRadius: 32, background: "white", minHeight: 400 }}>
            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 32 }}>
               <h3 style={{ margin: 0, fontWeight: 800 }}>Fluxo de Santidade (Crescimento de Membros)</h3>

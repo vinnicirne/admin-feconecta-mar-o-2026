@@ -143,40 +143,43 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* 🔴 ÁREA DE CRIAÇÃO (VISÍVEL EM TODOS OS DISPOSITIVOS) */}
-      <div style={{ marginBottom: 32 }}>
-        <PostCreator />
-      </div>
-
-      {/* 🔴 SALAS DE GUERRA AO VIVO */}
+      {/* 🔴 SALAS DE GUERRA AO VIVO (DESTAQUE MÁXIMO) */}
       {liveRooms.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ fontSize: 11, fontWeight: 900, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#ef4444", display: "inline-block", animation: "pulse 1.5s infinite" }} />
-            ORAÇÃO AO VIVO
-          </p>
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <p style={{ fontSize: 11, fontWeight: 900, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#ef4444", display: "inline-block", animation: "pulse 1.5s infinite" }} />
+              ORAÇÃO AO VIVO
+            </p>
+            <button onClick={fetchLiveRooms} style={{ background: "none", border: 0, cursor: "pointer", fontSize: 10, fontWeight: 700, color: "var(--muted)" }}>Recarregar</button>
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {liveRooms.map(room => (
-              <div key={room.id} className="card" style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, background: "linear-gradient(135deg, rgba(15,118,110,0.06) 0%, rgba(19,78,74,0.04) 100%)", border: "1px solid rgba(15,118,110,0.15)" }}>
-                <div style={{ width: 48, height: 48, borderRadius: 14, background: "var(--primary)", display: "grid", placeItems: "center", color: "white", flexShrink: 0 }}>
-                  <Mic2 size={22} />
+              <div key={room.id} className="card" style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, background: "linear-gradient(135deg, rgba(15,118,110,0.08) 0%, rgba(19,78,74,0.06) 100%)", border: "1px solid rgba(15,118,110,0.2)", borderRadius: 24, boxShadow: "0 10px 30px rgba(15,118,110,0.12)" }}>
+                <div style={{ width: 52, height: 52, borderRadius: 16, background: "var(--primary)", display: "grid", placeItems: "center", color: "white", flexShrink: 0, boxShadow: "0 6px 15px rgba(15,118,110,0.3)" }}>
+                  <Mic2 size={24} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 9, fontWeight: 900, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 100 }}>AO VIVO</span>
-                    <span className="muted" style={{ fontSize: 11 }}>{room.current_viewers || 1} orando</span>
+                    <span className="muted" style={{ fontSize: 11 }}>{room.current_viewers || 1} oradores</span>
                   </div>
-                  <strong style={{ fontSize: 14, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.title}</strong>
-                  <span className="muted" style={{ fontSize: 11 }}>Sala de Oração ao Vivo</span>
+                  <strong style={{ fontSize: 15, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.title}</strong>
+                  <span className="muted" style={{ fontSize: 11 }}>Toque para se juntar à intercessão</span>
                 </div>
-                <Link href={`/war-room/${room.id}`} style={{ padding: "10px 18px", borderRadius: 100, background: "var(--primary)", color: "white", fontWeight: 800, fontSize: 12, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>
-                  🙏 Entrar
+                <Link href={`/war-room/${room.id}`} style={{ padding: "12px 24px", borderRadius: 100, background: "var(--primary)", color: "white", fontWeight: 900, fontSize: 13, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0, boxShadow: "0 8px 16px rgba(15,118,110,0.2)" }}>
+                  🙏 Participar
                 </Link>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* 🔴 ÁREA DE CRIAÇÃO (VISÍVEL EM TODOS OS DISPOSITIVOS) */}
+      <div style={{ marginBottom: 32 }}>
+        <PostCreator />
+      </div>
 
       {/* 🔴 FEED REAL COM MÍDIAS */}
       <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 32 }}>
@@ -257,7 +260,7 @@ function PostContent({ post }: { post: any }) {
         </div>
       )}
 
-      {isOracao && (
+      {isOracao && !post.metadata?.war_room_id && (
         <button style={{ 
           marginTop: 24, background: "linear-gradient(135deg, #10b981, #065f46)", border: 0, 
           borderRadius: 100, padding: "12px 32px", color: "white", fontWeight: 900, fontSize: 14,
@@ -265,6 +268,16 @@ function PostContent({ post }: { post: any }) {
         }}>
           🙏 ORAR POR MIM
         </button>
+      )}
+
+      {post.metadata?.war_room_id && (
+        <Link href={`/war-room/${post.metadata.war_room_id}`} style={{ 
+          display: "inline-block", marginTop: 24, background: "white", color: "#065f46", border: 0, 
+          borderRadius: 100, padding: "12px 32px", fontWeight: 900, fontSize: 14,
+          boxShadow: "0 10px 20px rgba(0,0,0,0.1)", textDecoration: "none"
+        }}>
+          🛡️ ENTRAR NA SALA DE GUERRA
+        </Link>
       )}
     </div>
   );
