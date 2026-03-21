@@ -27,13 +27,15 @@ export function LoginForm() {
       setError("Credenciais inválidas");
       setLoading(false);
     } else {
-      // Redirecionamento inteligente: se estiver tentando acessar o admin, vai pro dashboard
-      // Se for apenas login de membro, fica na página atual ou vai pro feed
-      const isDashboardAttempt = window.location.pathname.includes("/dashboard") || window.location.pathname.includes("/login");
-      if (isDashboardAttempt) {
+      // Redirecionamento seguro: Membros comuns sempre vão para o Feed (/)
+      // Apenas administradores explícitos acessam o dashboard
+      const isAdmin = data.user?.app_metadata?.role === 'admin' || data.user?.user_metadata?.role === 'admin';
+      
+      if (isAdmin) {
          router.push("/dashboard");
       } else {
-         router.refresh(); // Fica onde está e atualiza os componentes
+         router.push("/"); // Usuário comum vai para o Feed
+         router.refresh();
       }
     }
   };
