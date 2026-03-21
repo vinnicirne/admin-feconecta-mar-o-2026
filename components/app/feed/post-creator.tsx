@@ -181,30 +181,63 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
     }
     setIsPublishing(true);
     try {
-      // Metadados Reais do Reels para o Backend (Ouro)
-      const reelsMetadata = videoUrl ? {
-         trim: trimRange,
-         overlay: overlayText,
-         text_pos: textPos,
-         music: bgMusic
-      } : null;
+      let finalFileUrl = media?.url || audioUrl || null;
+      let finalMediaType = media?.type || (videoUrl ? 'video' : (audioUrl ? 'audio' : 'text'));
+
+      // 🔥 PROCESSAMENTO REAL DE VÍDEO (PIPELINE REELS PRO)
+      if (videoUrl && !media) {
+         console.log("🎬 Iniciando Processamento FFmpeg...");
+         const videoBlob = await fetch(videoUrl).then(r => r.blob());
+         
+         const formData = new FormData();
+         formData.append("file", videoBlob, "reels-raw.webm");
+         formData.append("start", trimRange.start.toString());
+         formData.append("end", trimRange.end.toString());
+         formData.append("text", overlayText);
+         formData.append("textX", textPos.x.toString());
+         formData.append("textY", textPos.y.toString());
+
+         const processRes = await fetch("/api/video/process", {
+           method: "POST",
+           body: formData
+         });
+
+         if (!processRes.ok) throw new Error("Erro ao processar vídeo no servidor");
+         
+         // Pegar o vídeo MP4 final processado
+         const processedBlob = await processRes.blob();
+         
+         // 📤 UPLOAD PARA O STORAGE DO SUPABASE (Ouro)
+         const fileName = `reels-${Date.now()}.mp4`;
+         const { data: uploadData, error: uploadError } = await supabase.storage
+           .from('post-media')
+           .upload(fileName, processedBlob, { contentType: 'video/mp4' });
+
+         if (uploadError) throw new Error(uploadError.message);
+         
+         const { data: { publicUrl } } = supabase.storage.from('post-media').getPublicUrl(fileName);
+         finalFileUrl = publicUrl;
+         finalMediaType = 'video';
+      }
 
       const res = await createPostAction({
         content: text,
         post_type: postType,
-        media_type: media?.type || (videoUrl ? 'video' : (audioUrl ? 'audio' : 'text')),
-        image_url: media?.url || videoUrl || audioUrl || null,
+        media_type: finalMediaType,
+        image_url: finalFileUrl,
         background_style: postType === "compartilhar" ? "transparent" : greenGradient,
         is_bold: styles.bold,
         is_italic: styles.italic,
         status: 'published',
-        metadata: reelsMetadata // Enviando as edições pro backend
+        metadata: videoUrl ? { trimRange, overlayText, textPos } : null
       });
 
       if (!res.success) throw new Error(res.error);
 
       setText("");
       setIsExpanded(false);
+      setVideoUrl(null);
+      setOverlayText("");
       router.refresh();
       window.location.reload(); 
     } catch (err: any) {
