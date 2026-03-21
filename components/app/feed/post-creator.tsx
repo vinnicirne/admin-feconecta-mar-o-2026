@@ -38,22 +38,30 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
   const [styles, setStyles] = useState({ bold: false, italic: false });
   const [media, setMedia] = useState<{ url: string; type: string } | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraMode, setCameraMode] = useState<"photo" | "video">("photo");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
+  const videoChunks = useRef<Blob[]>([]);
 
   useEffect(() => {
     if (forceExpanded || initialCitation) setIsExpanded(true);
   }, [forceExpanded, initialCitation]);
 
-  // 📸 LÓGICA DE CÂMERA
-  const startCamera = async () => {
+  // 📸 LÓGICA DE CÂMERA (FOTO + VÍDEO)
+  const startCamera = async (mode: "photo" | "video") => {
+    setCameraMode(mode);
     setIsCameraActive(true);
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: true, 
+      audio: mode === "video" 
+    });
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.play();
@@ -72,10 +80,32 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
     stopCamera();
   };
 
+  const startVideoRecording = () => {
+    const stream = videoRef.current?.srcObject as MediaStream;
+    if (!stream) return;
+    const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+    mediaRecorderRef.current = recorder;
+    videoChunks.current = [];
+    recorder.ondataavailable = (e) => videoChunks.current.push(e.data);
+    recorder.onstop = () => {
+      const blob = new Blob(videoChunks.current, { type: "video/webm" });
+      setVideoUrl(URL.createObjectURL(blob));
+      stopCamera();
+    };
+    recorder.start();
+    setIsRecordingVideo(true);
+  };
+
+  const stopVideoRecording = () => {
+    mediaRecorderRef.current?.stop();
+    setIsRecordingVideo(false);
+  };
+
   const stopCamera = () => {
     const stream = videoRef.current?.srcObject as MediaStream;
     stream?.getTracks().forEach(t => t.stop());
     setIsCameraActive(false);
+    setIsRecordingVideo(false);
   };
 
   // 🎤 LÓGICA DE ÁUDIO
@@ -103,7 +133,7 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
     : "radial-gradient(circle at top right, rgba(255,255,255,0.15), transparent), radial-gradient(circle at bottom left, #064e3b, #022c22)";
 
   const handlePublish = async () => {
-    if (!text.trim() && !media && !audioUrl) {
+    if (!text.trim() && !media && !audioUrl && !videoUrl) {
       alert("Escreva algo ou adicione uma mídia 🙏");
       return;
     }
@@ -112,8 +142,8 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
       const res = await createPostAction({
         content: text,
         post_type: postType,
-        media_type: media?.type || (audioUrl ? 'audio' : 'text'),
-        image_url: media?.url || audioUrl || null,
+        media_type: media?.type || (videoUrl ? 'video' : (audioUrl ? 'audio' : 'text')),
+        image_url: media?.url || videoUrl || audioUrl || null,
         background_style: postType === "compartilhar" ? "transparent" : greenGradient,
         is_bold: styles.bold,
         is_italic: styles.italic,
@@ -194,8 +224,28 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
         {isCameraActive ? (
           <div style={{ position: "relative", marginBottom: 12 }}>
             <video ref={videoRef} style={{ width: "100%", borderRadius: 16, background: "black" }} />
-            <button onClick={takePhoto} style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", background: "white", border: 0, borderRadius: "50%", width: 50, height: 50, display: "grid", placeItems: "center", boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}><Eye size={24} color={colors.primary} /></button>
-            <button onClick={stopCamera} style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.5)", border: 0, borderRadius: "50%", width: 30, height: 30, color: "white" }}><X size={16} /></button>
+            
+            <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 20, alignItems: "center" }}>
+              {cameraMode === "photo" ? (
+                <button onClick={takePhoto} style={{ background: "white", border: 0, borderRadius: "50%", width: 60, height: 60, display: "grid", placeItems: "center", boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}>
+                  <Eye size={30} color={colors.primary} />
+                </button>
+              ) : (
+                <button 
+                  onClick={isRecordingVideo ? stopVideoRecording : startVideoRecording} 
+                  style={{ 
+                    background: isRecordingVideo ? "#ef4444" : "white", border: "4px solid rgba(255,255,255,0.3)", 
+                    borderRadius: "50%", width: 64, height: 64, display: "grid", placeItems: "center", 
+                    boxShadow: "0 4px 15px rgba(0,0,0,0.3)", transition: "0.2s" 
+                  }}
+                >
+                  {isRecordingVideo ? <div style={{ width: 20, height: 20, background: "white", borderRadius: 4 }}></div> : <div style={{ width: 24, height: 24, background: "#ef4444", borderRadius: "50%" }}></div>}
+                </button>
+              )}
+            </div>
+
+            <button onClick={stopCamera} style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.5)", border: 0, borderRadius: "50%", width: 34, height: 34, color: "white", display: "grid", placeItems: "center" }}><X size={18} /></button>
+            {isRecordingVideo && <div style={{ position: "absolute", top: 10, left: 10, background: "#ef4444", color: "white", padding: "4px 12px", borderRadius: 100, fontSize: 10, fontWeight: 900, animation: "pulse 1s infinite" }}>REC</div>}
           </div>
         ) : (
           <textarea 
@@ -215,7 +265,8 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
             <span onClick={() => setStyles(s => ({ ...s, bold: !s.bold }))} style={{ fontSize: 16, fontWeight: styles.bold ? 900 : 500, color: styles.bold ? colors.primary : colors.text, cursor: "pointer" }}>B</span>
             <span onClick={() => setStyles(s => ({ ...s, italic: !s.italic }))} style={{ fontSize: 16, fontStyle: "italic", fontWeight: styles.italic ? 900 : 500, color: styles.italic ? colors.primary : colors.text, cursor: "pointer" }}>I</span>
             <ImageIcon onClick={() => fileInputRef.current?.click()} size={20} color={media ? colors.primaryLight : colors.primary} style={{ cursor: "pointer" }} />
-            <Settings onClick={startCamera} size={20} color={isCameraActive ? colors.primaryLight : colors.primary} style={{ cursor: "pointer" }} />
+            <Settings onClick={() => startCamera("photo")} size={20} color={(isCameraActive && cameraMode === "photo") ? colors.primaryLight : colors.primary} style={{ cursor: "pointer" }} title="Foto" />
+            <Video onClick={() => startCamera("video")} size={20} color={(isCameraActive && cameraMode === "video") ? colors.primaryLight : colors.primary} style={{ cursor: "pointer" }} title="Vídeo" />
             <Mic 
               onClick={isRecording ? stopRecording : startRecording} 
               size={20} 
@@ -223,7 +274,6 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
               style={{ cursor: "pointer", animation: isRecording ? "pulse 1s infinite" : "none" }} 
             />
             <Sparkles size={20} color="#f59e0b" style={{ cursor: "pointer" }} />
-            {isRecording && <span style={{ fontSize: 12, color: "#ef4444", fontWeight: 800 }}>GRAVANDO...</span>}
         </div>
       </div>
 
@@ -231,6 +281,15 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
         <div style={{ marginTop: 12, position: "relative" }}>
           <img src={media.url} style={{ width: "100%", borderRadius: 16, maxHeight: 150, objectFit: "cover" }} />
           <button onClick={() => setMedia(null)} style={{ position: "absolute", top: 8, right: 8, background: "white", border: 0, borderRadius: "50%", width: 24, height: 24, display: "grid", placeItems: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {videoUrl && (
+        <div style={{ marginTop: 12, position: "relative" }}>
+          <video src={videoUrl} controls style={{ width: "100%", borderRadius: 16, maxHeight: 200, background: "black" }} />
+          <button onClick={() => setVideoUrl(null)} style={{ position: "absolute", top: 8, right: 8, background: "white", border: 0, borderRadius: "50%", width: 24, height: 24, display: "grid", placeItems: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
             <X size={14} />
           </button>
         </div>
@@ -260,6 +319,7 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
            </h2>
            
            {media && <img src={media.url} style={{ width: "100%", borderRadius: 16, marginTop: 8 }} />}
+           {videoUrl && <div style={{ background: "rgba(255,255,255,0.1)", padding: 12, borderRadius: 16, width: "100%", display: "flex", alignItems: "center", gap: 10 }}>🎬 Vídeo Reels Anexado</div>}
            {audioUrl && <div style={{ background: "rgba(255,255,255,0.1)", padding: 8, borderRadius: 12, width: "100%" }}>🎧 Áudio Anexado</div>}
 
            <div style={{ height: 1, background: postType === "compartilhar" ? colors.primaryLight : "rgba(255,255,255,0.2)", width: 80 }}></div>
