@@ -1,22 +1,41 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-// Singleton para o cliente no navegador para evitar erro de múltiplas instâncias GoTrue
-let client: ReturnType<typeof createBrowserClient> | null = null;
+// Singleton para o cliente no navegador
+let clientInstance: any = null;
 
+/**
+ * 🛡️ CLIENTE MONITORADO SUPABASE (FéConecta v2)
+ * 
+ * Este singleton resolve a concorrência por locks de autenticação no navegador 
+ * e blinda a aplicação contra o uso de chaves 'placeholder'. Se as variáveis 
+ * NEXT_PUBLIC_SUPABASE_URL ou NEXT_PUBLIC_SUPABASE_ANON_KEY não estiverem 
+ * disponíveis no momento da criação, o sistema loga um erro ministerial crítico 
+ * e impede a criação de uma instância inválida.
+ */
 export function createClient() {
   const isBrowser = typeof window !== 'undefined';
   
-  if (isBrowser && client) return client;
+  // Singleton para o navegador
+  if (isBrowser && clientInstance) return clientInstance;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   
-  if (isBrowser) {
-    client = createBrowserClient(url, key);
-    return client;
+  // 🛡️ BLOQUEIO DE CHAVES INVÁLIDAS
+  if (!url || !key || url.includes('placeholder') || key === 'placeholder') {
+    if (isBrowser) {
+      console.error("❌ SUPABASE_URL ou ANON_KEY não configuradas ou são 'placeholder'!");
+      console.warn("Dica: Verifique seu arquivo .env ou reinicie o 'npm run dev'");
+    }
+    // Retornamos um dummy nulo para evitar recursão infinita ou quebra de hooks
+    return null;
   }
   
-  // No servidor, criamos uma instância rápida ou usamos o server client se necessário
-  // MAS no browser, o singleton é sagrado para evitar conflitos de locks
+  if (isBrowser) {
+    clientInstance = createBrowserClient(url, key);
+    return clientInstance;
+  }
+  
+  // No servidor (SSR), o Next.js lida com a concorrência, retornamos nova instância
   return createBrowserClient(url, key);
 }

@@ -36,10 +36,15 @@ export default function FeedPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    if (!supabase) {
+      console.error("ERRO AO CARREGAR FEED: Supabase não está configurado corretamente (variáveis de ambiente ausentes).");
+      setLoading(false);
+      return;
+    }
     fetchPosts();
     fetchActiveRooms();
 
-    // 🔴 REALTIME
+    // 🔴 REALTIME: Ouvir mudanças nas salas de oração
     const channel = supabase
       .channel('public:prayer_rooms')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'prayer_rooms' }, () => {
@@ -47,7 +52,9 @@ export default function FeedPage() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { 
+      if (supabase && channel) supabase.removeChannel(channel); 
+    };
   }, []);
 
   const fetchPosts = async () => {

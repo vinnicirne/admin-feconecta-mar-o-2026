@@ -215,6 +215,8 @@ export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { for
       const blob = await fetch(url).then(r => r.blob());
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${extension}`;
       
+      if (!supabase) throw new Error("Sistema de armazenamento indisponível (Erro de configuração)");
+
       const { data, error } = await supabase.storage
         .from('post-media')
         .upload(fileName, blob, { contentType, upsert: true });

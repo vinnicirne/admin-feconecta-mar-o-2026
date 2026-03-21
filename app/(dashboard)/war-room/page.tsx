@@ -39,7 +39,7 @@ export default async function WarRoomPage() {
                <h3 className="muted">Nenhuma Sala de Guerra ativa neste momento.</h3>
                <p className="muted" style={{ fontSize: 14 }}>As salas criadas pelos líderes aparecerão aqui para monitoramento.</p>
             </div>
-         ) : rooms.map(room => (
+         ) : rooms.map((room: any) => (
             <article key={room.id} className="card shadow-hover" style={{ padding: 24, border: "1px solid var(--line)" }}>
                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
                   <div style={{ padding: "4px 12px", borderRadius: 100, background: "#ef4444", color: "white", fontSize: 10, fontWeight: 900, display: "flex", alignItems: "center", gap: 6 }}>

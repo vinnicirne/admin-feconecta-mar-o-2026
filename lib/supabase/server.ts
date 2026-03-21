@@ -4,9 +4,17 @@ import { createServerClient } from "@supabase/ssr";
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies();
 
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    console.error("ERRO: Credenciais do Supabase ausentes no servidor!");
+    return null as any;
+  }
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder',
+    url,
+    key,
     {
       cookies: {
         getAll() {
@@ -14,18 +22,14 @@ export async function createServerSupabaseClient() {
         },
         setAll(cookiesToSet: { name: string; value: string; options: any }[]) {
           try {
-            cookieStore.getAll().forEach(({ name, value }) => {
-              // Not clean, but some Next versions like it explicit
-            });
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // Ignored in Server Components (read-only cookie context)
+            // Ignored in Server Components
           }
         }
       }
     }
   );
 }
-
