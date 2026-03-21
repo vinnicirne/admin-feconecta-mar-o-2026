@@ -16,17 +16,22 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     console.warn("Supabase Auth failure at layout (ignoring for build/preview):", error);
   }
   
-  // 🛡️ PROTEÇÃO DE ROTA: Apenas Administradores entram aqui
+  // 🛡️ PROTEÇÃO DE ROTA: Apenas Administradores logados entram aqui
+  if (!authUser) {
+    redirect("/login"); // Se não estiver logado, vai para o login
+  }
+
   const isAdmin = authUser?.app_metadata?.role === 'admin' || authUser?.user_metadata?.role === 'admin';
+  
   if (!isAdmin) {
-    redirect("/"); // Membros comuns são expulsos do Dashboard para o Feed
+    redirect("/"); // Membros comuns sem papel de admin voltam para o feed
   }
 
   const user = { 
-    id: authUser!.id, 
-    name: authUser!.user_metadata?.full_name || authUser!.email?.split('@')[0] || "Admin", 
-    email: authUser!.email!, 
-    role: (authUser!.user_metadata?.role || "admin") as any, 
+    id: authUser.id, 
+    name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || "Admin", 
+    email: authUser.email!, 
+    role: (authUser.user_metadata?.role || "admin") as any, 
     mfaEnabled: true 
   };
 

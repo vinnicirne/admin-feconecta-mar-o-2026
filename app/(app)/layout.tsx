@@ -14,7 +14,10 @@ import {
   Plus,
   X,
   Lock,
-  LogIn
+  LogIn,
+  Mic2,
+  Globe,
+  Menu
 } from "lucide-react";
 import Link from "next/link";
 import { PostCreator } from "@/components/app/feed/post-creator";
@@ -24,8 +27,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
   const pathname = usePathname();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [activeFeatures, setActiveFeatures] = useState<Set<string>>(new Set());
   
   const isAuthPage = pathname.includes("/login") || pathname.includes("/signup");
 
@@ -34,13 +39,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!supabase) return;
     
     checkUser();
+    fetchFeatures();
+
+    const fetchSubscription = supabase
+      .channel('public:app_features')
+      .on('postgres_changes', { event: '*', table: 'app_features', schema: 'public' }, () => {
+        fetchFeatures();
+      })
+      .subscribe();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       setUser(session?.user || null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(fetchSubscription);
+    };
   }, [supabase]);
+
+  const fetchFeatures = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('app_features').select('name, is_enabled');
+    if (data) {
+      const enabled = new Set<string>(data.filter((f: any) => f.is_enabled).map((f: any) => f.name));
+      setActiveFeatures(enabled);
+    }
+  };
 
   const checkUser = async () => {
     if (!supabase) return;
@@ -52,12 +77,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isAuthPage) return <>{children}</>;
 
   const menuItems = [
-    { label: "Feed", icon: Home, href: "/" },
-    { label: "Bíblia", icon: BookOpen, href: "/bible" },
-    { label: "POST", icon: Plus, onClick: () => setIsCreateModalOpen(true), isFloating: true }, 
-    { label: "Notas", icon: StickyNote, href: "/notes" },
-    { label: "Planos", icon: Sparkles, href: "/plans" },
-  ];
+    { id: 'feed', label: "Feed", icon: Home, href: "/" },
+    { id: 'bible', label: "Bíblia", icon: BookOpen, href: "/bible" },
+    { id: 'post', label: "POST", icon: Plus, onClick: () => setIsCreateModalOpen(true), isFloating: true }, 
+    { id: 'notes', label: "Notas", icon: StickyNote, href: "/notes" },
+    { id: 'plans', label: "Planos", icon: Sparkles, href: "/plans" },
+  ].filter(item => activeFeatures.size === 0 || activeFeatures.has(item.id));
 
   return (
     <div className="app-container" style={{ minHeight: "100vh", background: "#f8fafc" }}>
@@ -122,10 +147,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         borderBottom: "1px solid var(--line)", zIndex: 1050, display: "flex", alignItems: "center", 
         justifyContent: "space-between", padding: "0 20px"
       }}>
+         {/* 🍔 BOTÃO HAMBURGUER */}
+         <button 
+           onClick={() => setIsMobileMenuOpen(true)}
+           style={{ width: 38, height: 38, borderRadius: 12, border: 0, background: "var(--line)", display: "grid", placeItems: "center", cursor: "pointer" }}
+         >
+           <Menu size={20} style={{ color: "var(--primary)" }} />
+         </button>
+
          <Link href="/" style={{ textDecoration: "none", color: "inherit", fontWeight: 800, fontSize: 17 }}>FéConecta</Link>
+
          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <button style={{ width: 38, height: 38, borderRadius: 12, border: 0, background: "var(--line)", display: "grid", placeItems: "center" }}><Search size={19} className="muted" /></button>
-            
             {user ? (
                <Link 
                  href={`/profile/${user.user_metadata.username || (user.email ? user.email.split('@')[0] : 'me')}`} 
@@ -141,10 +173,118 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
          </div>
       </header>
 
-      {/* 🔴 MAIN CONTENT */}
-      <main>
-        {children}
-      </main>
+      {/* 🍔 DRAWER MOBILE MENU */}
+      {isMobileMenuOpen && (
+        <>
+          {/* Overlay */}
+          <div 
+            onClick={() => setIsMobileMenuOpen(false)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 1998 }}
+          />
+          {/* Drawer */}
+          <div style={{
+            position: "fixed", top: 0, left: 0, width: 280, height: "100vh",
+            background: "white", zIndex: 1999, padding: "24px 20px",
+            display: "flex", flexDirection: "column", gap: 8,
+            boxShadow: "4px 0 30px rgba(0,0,0,0.12)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <span style={{ fontWeight: 900, fontSize: 18 }}>FéConecta</span>
+              <button onClick={() => setIsMobileMenuOpen(false)} style={{ width: 36, height: 36, borderRadius: 10, border: 0, background: "var(--line)", display: "grid", placeItems: "center", cursor: "pointer" }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: 10, fontWeight: 900, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px 4px" }}>Ações de Fé</p>
+
+            <Link href="/war-room/new" onClick={() => setIsMobileMenuOpen(false)} style={{
+              display: "flex", alignItems: "center", gap: 14, padding: "14px 16px",
+              borderRadius: 16, textDecoration: "none", color: "var(--foreground)",
+              background: "var(--primary-soft)", fontWeight: 700, fontSize: 15
+            }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(15, 118, 110, 0.15)", display: "grid", placeItems: "center", color: "var(--primary)" }}>
+                <Mic2 size={20} />
+              </div>
+              <div>
+                <strong style={{ display: "block" }}>Sala de Guerra</strong>
+                <span style={{ fontSize: 11, color: "var(--muted)" }}>Iniciar oração ao vivo</span>
+              </div>
+            </Link>
+
+            <Link href="/communities/new" onClick={() => setIsMobileMenuOpen(false)} style={{
+              display: "flex", alignItems: "center", gap: 14, padding: "14px 16px",
+              borderRadius: 16, textDecoration: "none", color: "var(--foreground)",
+              background: "rgba(217, 119, 6, 0.08)", fontWeight: 700, fontSize: 15
+            }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(217, 119, 6, 0.15)", display: "grid", placeItems: "center", color: "var(--accent)" }}>
+                <Globe size={20} />
+              </div>
+              <div>
+                <strong style={{ display: "block" }}>Comunidade</strong>
+                <span style={{ fontSize: 11, color: "var(--muted)" }}>Fundar nova igreja</span>
+              </div>
+            </Link>
+          </div>
+        </>
+      )}
+
+      {/* 🔴 MAIN CONTENT COM SIDEBAR ESQUERDA (DESKTOP) */}
+      <div className="app-body" style={{ display: "flex", position: "relative" }}>
+
+        {/* SIDEBAR ESQUERDA DE FÉ (DESKTOP ONLY) */}
+        <aside className="faith-sidebar" style={{
+          position: "fixed", top: 92, left: 0, width: 240, height: "calc(100vh - 92px)",
+          padding: "24px 16px", overflowY: "auto", display: "none",
+          flexDirection: "column", gap: 8, borderRight: "1px solid var(--line)",
+          background: "rgba(255,255,255,0.6)", backdropFilter: "blur(12px)"
+        }}>
+          <p style={{ fontSize: 10, fontWeight: 900, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px 8px" }}>
+            Ações de Fé
+          </p>
+
+          <Link href="/war-room/new" style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+            borderRadius: 14, textDecoration: "none", color: "var(--foreground)",
+            background: pathname === "/war-room/new" ? "var(--primary-soft)" : "transparent",
+            fontWeight: 700, fontSize: 14, transition: "0.2s"
+          }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(15, 118, 110, 0.1)", display: "grid", placeItems: "center", color: "var(--primary)" }}>
+              <Mic2 size={18} />
+            </div>
+            <div>
+              <strong style={{ display: "block", fontSize: 13 }}>Sala de Guerra</strong>
+              <span style={{ fontSize: 10, color: "var(--muted)" }}>Oração ao vivo</span>
+            </div>
+          </Link>
+
+          <Link href="/communities/new" style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+            borderRadius: 14, textDecoration: "none", color: "var(--foreground)",
+            background: pathname === "/communities/new" ? "var(--primary-soft)" : "transparent",
+            fontWeight: 700, fontSize: 14, transition: "0.2s"
+          }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(217, 119, 6, 0.1)", display: "grid", placeItems: "center", color: "var(--accent)" }}>
+              <Globe size={18} />
+            </div>
+            <div>
+              <strong style={{ display: "block", fontSize: 13 }}>Comunidade</strong>
+              <span style={{ fontSize: 10, color: "var(--muted)" }}>Fundar igreja</span>
+            </div>
+          </Link>
+        </aside>
+
+        <main className="app-main">
+          {children}
+        </main>
+      </div>
+
+      <style jsx global>{`
+        .faith-sidebar { display: none !important; }
+        @media (min-width: 1024px) {
+          .faith-sidebar { display: flex !important; }
+          .app-main { margin-left: 240px; }
+        }
+      `}</style>
 
       {/* 🔴 MOBILE BOTTOM NAV */}
       <nav className="mobile-bottom-nav" style={{ 
@@ -186,21 +326,44 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", zIndex: 2000,
           display: "flex", alignItems: "flex-end"
         }}>
-           <div style={{ 
-              width: "100%", background: "white", borderTopLeftRadius: 32, borderTopRightRadius: 32,
-              padding: "24px", maxHeight: "90vh", overflowY: "auto", position: "relative"
-           }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                 <h2 style={{ fontSize: 18, fontWeight: 900, margin: 0 }}>Nova Mensagem</h2>
-                 <button onClick={() => setIsCreateModalOpen(false)} style={{ background: "#f1f5f9", border: 0, width: 36, height: 36, borderRadius: "50%", display: "grid", placeItems: "center" }}>
-                    <X size={20} />
-                 </button>
-              </div>
-              
-              <div onClick={(e) => e.stopPropagation()}>
-                 <PostCreator forceExpanded onSuccess={() => setIsCreateModalOpen(false)} />
-              </div>
-           </div>
+            <div style={{ 
+               width: "100%", background: "white", borderTopLeftRadius: 32, borderTopRightRadius: 32,
+               padding: "24px", maxHeight: "90vh", overflowY: "auto", position: "relative"
+            }}>
+               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                  <h2 style={{ fontSize: 20, fontWeight: 900, margin: 0 }}>Ações de Fé</h2>
+                  <button onClick={() => setIsCreateModalOpen(false)} style={{ background: "#f1f5f9", border: 0, width: 40, height: 40, borderRadius: "50%", display: "grid", placeItems: "center" }}>
+                     <X size={24} />
+                  </button>
+               </div>
+               
+               <div className="grid" style={{ gap: 16 }}>
+                 {/* OPÇÃO 1: POST PADRÃO */}
+                 <div style={{ background: "white", padding: "16px", borderRadius: 24, border: "1px solid var(--line)", display: "flex", gap: 16 }}>
+                    <PostCreator forceExpanded onSuccess={() => setIsCreateModalOpen(false)} />
+                 </div>
+
+                 <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    {/* OPÇÃO 2: SALA DE GUERRA */}
+                    <button 
+                      onClick={() => window.location.href = '/war-room/new'}
+                      style={{ background: "var(--primary-soft)", padding: "20px 16px", borderRadius: 24, border: 0, display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}
+                    >
+                      <Mic2 size={24} color="var(--primary)" />
+                      <strong style={{ fontSize: 13, color: "var(--primary)" }}>Sala de Guerra</strong>
+                    </button>
+
+                    {/* OPÇÃO 3: COMUNIDADE */}
+                    <button 
+                      onClick={() => window.location.href = '/communities/new'}
+                      style={{ background: "rgba(217, 119, 6, 0.1)", padding: "20px 16px", borderRadius: 24, border: 0, display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}
+                    >
+                      <Globe size={24} color="var(--accent)" />
+                      <strong style={{ fontSize: 13, color: "var(--accent)" }}>Criar Igreja</strong>
+                    </button>
+                 </div>
+               </div>
+            </div>
         </div>
       )}
 

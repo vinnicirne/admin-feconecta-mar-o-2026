@@ -40,13 +40,23 @@ export function Topbar({ user }: { user?: any }) {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        {/* 🔴 MENU HAMBURGUER MOBILE */}
+        {/* 🔴 MENU HAMBURGUER MOBILE (ALTAMENTE VISÍVEL) */}
         <button 
           className="mobile-menu-btn"
           onClick={toggleMobileMenu}
-          style={{ background: "none", border: 0, cursor: "pointer", color: "var(--primary)" }}
+          style={{ 
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            background: "var(--line)", 
+            border: "1px solid rgba(0,0,0,0.05)", 
+            cursor: "pointer", 
+            color: "var(--primary)",
+            display: "grid",
+            placeItems: "center"
+          }}
         >
-          <Menu size={24} />
+          <Menu size={22} style={{ strokeWidth: 3 }} />
         </button>
 
         {/* 🔴 BUSCA GLOBAL INTEGRADA (RESPONSIVA) */}

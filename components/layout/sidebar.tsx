@@ -18,7 +18,9 @@ import {
   History,
   Info,
   LifeBuoy,
-  Zap
+  Zap,
+  Mic2,
+  Lock
 } from "lucide-react";
 import { useSidebar } from "./sidebar-context";
 
@@ -37,9 +39,10 @@ export function Sidebar({ user }: { user: any }) {
     {
       label: "Governança",
       items: [
+        { name: "SALA DE GUERRA", icon: Mic2, path: "/war-room" },
+        { name: "Comunidades", icon: Globe, path: "/communities" },
         { name: "Membros", icon: Users, path: "/users" },
         { name: "Publicações", icon: MessageSquare, path: "/posts" },
-        { name: "Comunidades", icon: Globe, path: "/communities" },
       ]
     },
     {

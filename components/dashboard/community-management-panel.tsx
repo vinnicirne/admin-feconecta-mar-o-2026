@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 import type { ManagedCommunity } from "@/types";
 
 type CommunityManagementPanelProps = {
@@ -26,11 +27,16 @@ export function CommunityManagementPanel({ communities }: CommunityManagementPan
   return (
     <section className="grid" style={{ gridTemplateColumns: "minmax(0, 1.35fr) minmax(320px, 0.95fr)" }}>
       <div className="card" style={{ padding: 24 }}>
-        <span className="pill">Comunidades</span>
-        <h2>Gerenciamento de comunidades</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Liste comunidades, acompanhe crescimento, membros e posts internos, e aplique governanca com seguranca.
-        </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <span className="pill" style={{ background: "rgba(15, 118, 110, 0.1)", color: "var(--primary)" }}>Igrejas & Grupos</span>
+            <h2 style={{ marginTop: 12, marginBottom: 4, fontSize: "1.8rem", fontWeight: 800 }}>Gestão de Comunidades</h2>
+            <p className="muted" style={{ margin: 0 }}>Funde novas igrejas, monitore o crescimento e aplique governança ministerial.</p>
+          </div>
+          <button className="button" style={{ height: 44, padding: "0 20px", fontWeight: 800, display: "flex", alignItems: "center", gap: 8 }}>
+             <Plus size={18} /> Nova Comunidade
+          </button>
+        </div>
 
         <label style={{ display: "block", marginTop: 20 }}>
           <span>Buscar comunidade</span>

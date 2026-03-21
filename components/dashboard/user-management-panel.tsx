@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ManagedUser, UserStatus } from "@/types";
 import { X, Search, Filter, UserRound, Mail, Calendar, MoreVertical, ShieldAlert, Edit, History, CheckCircle } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
@@ -27,11 +27,27 @@ export function UserManagementPanel({ users: initialUsers }: UserManagementPanel
   const [status, setStatus] = useState<"all" | UserStatus>("all");
   const [selectedId, setSelectedId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [realHistory, setRealHistory] = useState<string[]>([]);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+
+  useEffect(() => {
+    if (isHistoryModalOpen && selectedId) {
+       setLoading(true);
+       supabase.from('posts').select('content, created_at').eq('profile_id', selectedId).order('created_at', { ascending: false }).limit(5)
+         .then(({ data }) => {
+            const history = data?.map(p => `Publicação ministerial: "${p.content.substring(0, 30)}..." em ${new Date(p.created_at).toLocaleDateString()}`) || [];
+            if (history.length === 0) history.push("Nenhuma postagem detectada nos registros.");
+            setRealHistory(history);
+            setLoading(false);
+         });
+    }
+  }, [isHistoryModalOpen, selectedId]);
 
   const handleBan = async (id: string, name: string) => {
     if (!confirm(`TEM CERTEZA? O membro ${name} será banido definitivamente.`)) return;
@@ -222,6 +238,7 @@ export function UserManagementPanel({ users: initialUsers }: UserManagementPanel
               { label: "Cargo/Papel", value: roleLabels[selectedUser.role] },
               { label: "Membro desde", value: selectedUser.joinedAt },
               { label: "Igreja Local", value: selectedUser.church },
+              { label: "Data Nascimento", value: selectedUser.birthDate ? new Date(selectedUser.birthDate + "T00:00:00").toLocaleDateString('pt-BR') : "Não informado" },
             ].map((info, idx) => (
               <div key={idx} style={{ display: "flex", justifyContent: "space-between", paddingBottom: 10, borderBottom: "1px solid var(--line)" }}>
                 <span className="muted" style={{ fontWeight: 500 }}>{info.label}</span>
@@ -236,10 +253,10 @@ export function UserManagementPanel({ users: initialUsers }: UserManagementPanel
           </div>
 
           <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 32 }}>
-            <button className="button secondary" style={{ padding: 14, display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }} onClick={() => alert("Módulo de Edição de Perfil será aberto em breve.")}>
+            <button className="button secondary" style={{ padding: 14, display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }} onClick={() => setIsEditModalOpen(true)}>
               <Edit size={16} /> Editar Perfil
             </button>
-            <button className="button secondary" style={{ padding: 14, display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }} onClick={() => alert("Histórico completo de atividades em processamento.")}>
+            <button className="button secondary" style={{ padding: 14, display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }} onClick={() => setIsHistoryModalOpen(true)}>
               <History size={16} /> Ver Histórico
             </button>
             <p className="muted" style={{ gridColumn: "1 / -1", margin: "14px 0 2px", fontSize: 13, textTransform: "uppercase", letterSpacing: "0.05em" }}>Ações Críticas</p>
@@ -282,6 +299,97 @@ export function UserManagementPanel({ users: initialUsers }: UserManagementPanel
             )}
           </div>
         </aside>
+      )}
+      {/* 🔴 MODAL DE EDIÇÃO COMPLETA (FORÇA RE-RENDER COM KEY) */}
+      {isEditModalOpen && selectedUser && (
+        <div key={selectedUser.id} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(12px)", display: "grid", placeItems: "center", zIndex: 2000 }}>
+          <div className="card shadow-2xl" style={{ width: 550, padding: 32 }}>
+            <h3 style={{ margin: "0 0 24px", fontWeight: 800 }}>Ajuste Ministerial: {selectedUser.name}</h3>
+            
+            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <label style={{ gridColumn: "1 / -1" }}>
+                <span className="muted" style={{ fontSize: 13, fontWeight: 700, display: "block", marginBottom: 6 }}>Nome Completo do Membro</span>
+                <input className="input" defaultValue={selectedUser.name} id="edit-name" />
+              </label>
+              <label>
+                <span className="muted" style={{ fontSize: 13, fontWeight: 700, display: "block", marginBottom: 6 }}>Identificador (@username)</span>
+                <input className="input" defaultValue={selectedUser.username} id="edit-username" />
+              </label>
+              <label>
+                <span className="muted" style={{ fontSize: 13, fontWeight: 700, display: "block", marginBottom: 6 }}>E-mail de Cadastro</span>
+                <input className="input" defaultValue={selectedUser.email} id="edit-email" />
+              </label>
+              <label>
+                <span className="muted" style={{ fontSize: 13, fontWeight: 700, display: "block", marginBottom: 6 }}>Igreja / Comunidade Local</span>
+                <input className="input" defaultValue={selectedUser.church} id="edit-church" />
+              </label>
+              <label>
+                <span className="muted" style={{ fontSize: 13, fontWeight: 700, display: "block", marginBottom: 6 }}>Data de Nascimento</span>
+                <input className="input" type="date" defaultValue={selectedUser.birthDate} id="edit-birth" />
+              </label>
+              <label style={{ gridColumn: "1 / -1" }}>
+                <span className="muted" style={{ fontSize: 13, fontWeight: 700, display: "block", marginBottom: 6 }}>Biografia Ministerial</span>
+                <textarea className="input" style={{ minHeight: 80 }} defaultValue={selectedUser.bio} id="edit-bio" />
+              </label>
+              
+              <div style={{ display: "flex", gap: 12, marginTop: 12, gridColumn: "1 / -1" }}>
+                <button className="button secondary" style={{ flex: 1 }} onClick={() => setIsEditModalOpen(false)}>Cancelar</button>
+                <button className="button" style={{ flex: 1 }} onClick={async () => {
+                   const elements = {
+                      full_name: (document.getElementById('edit-name') as HTMLInputElement).value,
+                      username: (document.getElementById('edit-username') as HTMLInputElement).value,
+                      email: (document.getElementById('edit-email') as HTMLInputElement).value,
+                      church: (document.getElementById('edit-church') as HTMLInputElement).value,
+                      bio: (document.getElementById('edit-bio') as HTMLTextAreaElement).value,
+                      birth_date: (document.getElementById('edit-birth') as HTMLInputElement).value || undefined
+                   };
+                   setLoading(true);
+                   const { error } = await supabase.from('profiles').update(elements).eq('id', selectedUser.id);
+                   if (!error) {
+                      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { 
+                        ...u, 
+                        name: elements.full_name, 
+                        username: elements.username, 
+                        email: elements.email, 
+                        church: elements.church, 
+                        bio: elements.bio,
+                        birthDate: elements.birth_date ? new Date(elements.birth_date).toLocaleDateString() : u.birthDate
+                      } : u));
+                      setIsEditModalOpen(false);
+                      alert("Perfil ministerial atualizado globalmente.");
+                   }
+                   setLoading(false);
+                }}>Salvar Ajustes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔴 MODAL DE HISTÓRICO REALTIME */}
+      {isHistoryModalOpen && selectedUser && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(12px)", display: "grid", placeItems: "center", zIndex: 2000 }}>
+          <div className="card shadow-xl" style={{ width: 500, padding: 32 }}>
+            <h3 style={{ margin: "0 0 24px", fontWeight: 800 }}>Histórico da Caminhada: {selectedUser.name}</h3>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {loading ? (
+                <div style={{ padding: 24, textAlign: "center" }} className="muted anim-pulse">Sincronizando registros de fé...</div>
+              ) : realHistory.length > 0 ? (
+                realHistory.map((item, idx) => (
+                  <div key={idx} style={{ padding: "12px 16px", background: "var(--line)", borderRadius: 12, fontSize: 13, fontWeight: 600 }}>
+                    🔹 {item}
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: "12px 16px", border: "1px dashed var(--muted)", borderRadius: 12, fontSize: 13, color: "var(--muted)", textAlign: "center", fontStyle: "italic" }}>
+                  Fim dos registros recentes.
+                </div>
+              )}
+              <button className="button secondary" style={{ marginTop: 20 }} onClick={() => setIsHistoryModalOpen(false)}>Fechar Histórico</button>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );

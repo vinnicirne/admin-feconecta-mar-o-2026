@@ -15,6 +15,7 @@ import {
   Plus
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 type PostType = "compartilhar" | "edificar" | "oracao";
 
@@ -30,18 +31,46 @@ function CreatePostContent() {
   const router = useRouter();
   const [postType, setPostType] = useState<PostType>("oracao");
   const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const greenGradient = `
     radial-gradient(circle at top right, rgba(255,255,255,0.15), transparent),
     radial-gradient(circle at bottom left, #064e3b, #022c22)
   `;
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!text.trim()) {
       alert("Escreva algo antes de publicar 🙏");
       return;
     }
-    router.push("/feed");
+
+    setLoading(true);
+    const supabase = createClient();
+
+    // 🛡️ Obter usuário atual
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Você precisa estar logado para postar.");
+      setLoading(false);
+      return;
+    }
+
+    // 💾 Inserir no Banco de Dados
+    const { error } = await supabase.from('posts').insert({
+      profile_id: user.id,
+      content: text,
+      post_type: postType,
+      media_type: 'text',
+      status: 'published'
+    });
+
+    if (error) {
+      alert("Erro ao publicar: " + error.message);
+    } else {
+      router.push("/feed");
+    }
+    setLoading(false);
   };
 
   return (
@@ -72,16 +101,18 @@ function CreatePostContent() {
 
         <button
           onClick={handlePublish}
+          disabled={loading}
           style={{
-            background: colors.primary,
+            background: loading ? "#9ca3af" : colors.primary,
             color: "white",
             border: 0,
             borderRadius: 10,
             padding: "8px 16px",
             fontWeight: 700,
+            cursor: loading ? "wait" : "pointer"
           }}
         >
-          Publicar
+          {loading ? "Publicando..." : "Publicar"}
         </button>
       </header>
 

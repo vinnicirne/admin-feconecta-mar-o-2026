@@ -63,6 +63,7 @@ export type ManagedUser = {
   activityScore: string;
   bio: string;
   church: string;
+  birthDate?: string;
   lastSeen: string;
   activityHistory: string[];
 };

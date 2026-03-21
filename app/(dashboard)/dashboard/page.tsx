@@ -14,6 +14,7 @@ import {
   Calendar
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { FeatureManager } from "@/components/dashboard/feature-manager";
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState({
@@ -116,6 +117,9 @@ export default function DashboardPage() {
           loading={loading}
         />
       </div>
+
+      {/* 🔴 CONTROLE DE FUNCIONALIDADES (FEATURE TOGGLES) */}
+      <FeatureManager />
 
       {/* 🔴 ÁREA DE MONITORAMENTO DE EXPANSÃO */}
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>

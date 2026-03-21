@@ -26,10 +26,11 @@ export default async function UsersPage() {
     activityScore: p.points > 100 ? "Alta" : "Media",
     bio: p.bio || "Sem biografia ministerial.",
     church: p.church || "Igreja Local",
+    birthDate: p.birth_date || "",
     lastSeen: "Recentemente",
     activityHistory: [
-      "Perfil criado no sistema",
-      "Primeiro acesso registrado"
+      "Perfil sincronizado no sistema",
+      "Primeiro acesso registrado no Refúgio"
     ]
   })) : mockManagedUsers;
 

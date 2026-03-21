@@ -18,19 +18,36 @@ import {
   Copy,
   Repeat,
   Play,
-  Volume2
+  Volume2,
+  Mic2,
+  Globe
 } from "lucide-react";
 import { PostCreator } from "@/components/app/feed/post-creator";
 import { getPostsAction } from "@/app/actions/post-actions";
+import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 
 export default function FeedPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [liveRooms, setLiveRooms] = useState<any[]>([]);
+  const supabase = createClient();
 
   useEffect(() => {
     fetchPosts();
+    fetchLiveRooms();
+
+    // 🔴 REALTIME: atualiza salas ao vivo automaticamente
+    const channel = supabase
+      .channel('public:prayer_rooms')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'prayer_rooms' }, () => {
+        fetchLiveRooms();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const fetchPosts = async () => {
@@ -50,6 +67,24 @@ export default function FeedPage() {
     }
   };
 
+  const fetchLiveRooms = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('prayer_rooms')
+        .select('id, title, description, current_viewers, started_at, host_id')
+        .eq('status', 'live')
+        .order('started_at', { ascending: false });
+
+      if (error) {
+        console.error("ERRO AO BUSCAR SALAS AO VIVO:", error.message);
+        return;
+      }
+      setLiveRooms(data || []);
+    } catch (err) {
+      console.error("ERRO FETCH LIVE ROOMS:", err);
+    }
+  };
+
   return (
     <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px 120px" }}>
       
@@ -66,16 +101,82 @@ export default function FeedPage() {
         <div style={{ position: "absolute", right: -20, bottom: -20, opacity: 0.1 }}><Maximize2 size={120} /></div>
       </section>
 
-      {/* 🔴 ÁREA DE CRIAÇÃO (DYNAMIC - ESCONDIDA NO MOBILE) */}
-      <div className="desktop-only-creator">
+      {/* 🛡️ AÇÕES DE FÉ: SALA DE GUERRA E COMUNIDADES (PRIORIDADE MÁXIMA) */}
+      <div style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 11, fontWeight: 900, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12, paddingLeft: 4 }}>
+          Ferramentas de Fé
+        </p>
+        <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <button 
+            onClick={() => window.location.href = '/war-room/new'}
+            style={{ 
+              background: "white", padding: "16px", borderRadius: 20, border: "1px solid var(--line)", 
+              display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "0.2s",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.03)"
+            }}
+          >
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(15, 118, 110, 0.1)", display: "grid", placeItems: "center", color: "var(--primary)" }}>
+              <Mic2 size={20} />
+            </div>
+            <div style={{ textAlign: "left" }}>
+              <strong style={{ display: "block", fontSize: 13 }}>SALA DE GUERRA</strong>
+              <span className="muted" style={{ fontSize: 10 }}>Oração ao vivo</span>
+            </div>
+          </button>
+
+          <button 
+            onClick={() => window.location.href = '/communities/new'}
+            style={{ 
+              background: "white", padding: "16px", borderRadius: 20, border: "1px solid var(--line)", 
+              display: "flex", alignItems: "center", gap: 12, cursor: "pointer", transition: "0.2s",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.03)"
+            }}
+          >
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(217, 119, 6, 0.1)", display: "grid", placeItems: "center", color: "var(--accent)" }}>
+              <Globe size={20} />
+            </div>
+            <div style={{ textAlign: "left" }}>
+              <strong style={{ display: "block", fontSize: 13 }}>COMUNIDADE</strong>
+              <span className="muted" style={{ fontSize: 10 }}>Fundar igreja</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* 🔴 ÁREA DE CRIAÇÃO (VISÍVEL EM TODOS OS DISPOSITIVOS) */}
+      <div style={{ marginBottom: 32 }}>
         <PostCreator />
       </div>
 
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .desktop-only-creator { display: none !important; }
-        }
-      `}</style>
+      {/* 🔴 SALAS DE GUERRA AO VIVO */}
+      {liveRooms.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <p style={{ fontSize: 11, fontWeight: 900, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#ef4444", display: "inline-block", animation: "pulse 1.5s infinite" }} />
+            ORAÇÃO AO VIVO
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {liveRooms.map(room => (
+              <div key={room.id} className="card" style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, background: "linear-gradient(135deg, rgba(15,118,110,0.06) 0%, rgba(19,78,74,0.04) 100%)", border: "1px solid rgba(15,118,110,0.15)" }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: "var(--primary)", display: "grid", placeItems: "center", color: "white", flexShrink: 0 }}>
+                  <Mic2 size={22} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: 9, fontWeight: 900, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 100 }}>AO VIVO</span>
+                    <span className="muted" style={{ fontSize: 11 }}>{room.current_viewers || 1} orando</span>
+                  </div>
+                  <strong style={{ fontSize: 14, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.title}</strong>
+                  <span className="muted" style={{ fontSize: 11 }}>Sala de Oração ao Vivo</span>
+                </div>
+                <Link href={`/war-room/${room.id}`} style={{ padding: "10px 18px", borderRadius: 100, background: "var(--primary)", color: "white", fontWeight: 800, fontSize: 12, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}>
+                  🙏 Entrar
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 🔴 FEED REAL COM MÍDIAS */}
       <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 32 }}>
