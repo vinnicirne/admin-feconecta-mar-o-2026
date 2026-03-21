@@ -14,6 +14,7 @@ import {
   Settings,
   X,
   Play,
+  RefreshCcw,
   Loader2
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -43,9 +44,18 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraMode, setCameraMode] = useState<"photo" | "video">("photo");
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
+  
+  // ⚡ REELS EDITS
+  const [trimRange, setTrimRange] = useState({ start: 0, end: 15 });
+  const [overlayText, setOverlayText] = useState("");
+  const [textPos, setTextPos] = useState({ x: 50, y: 50 });
+  const [bgMusic, setBgMusic] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const videoChunks = useRef<Blob[]>([]);
@@ -54,17 +64,30 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
     if (forceExpanded || initialCitation) setIsExpanded(true);
   }, [forceExpanded, initialCitation]);
 
-  // 📸 LÓGICA DE CÂMERA (FOTO + VÍDEO)
+  // 📸 LÓGICA DE CÂMERA (FOTO + VÍDEO + FACING)
   const startCamera = async (mode: "photo" | "video") => {
     setCameraMode(mode);
     setIsCameraActive(true);
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-      video: true, 
-      audio: mode === "video" 
-    });
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.play();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode }, 
+        audio: mode === "video" 
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+    } catch (e) {
+      alert("Erro ao abrir câmera. Verifique as permissões.");
+    }
+  };
+
+  const toggleCamera = () => {
+    const newFacing = facingMode === "user" ? "environment" : "user";
+    setFacingMode(newFacing);
+    if (isCameraActive) {
+      stopCamera();
+      setTimeout(() => startCamera(cameraMode), 300);
     }
   };
 
@@ -89,7 +112,8 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
     recorder.ondataavailable = (e) => videoChunks.current.push(e.data);
     recorder.onstop = () => {
       const blob = new Blob(videoChunks.current, { type: "video/webm" });
-      setVideoUrl(URL.createObjectURL(blob));
+      const url = URL.createObjectURL(blob);
+      setVideoUrl(url);
       stopCamera();
     };
     recorder.start();
@@ -139,6 +163,14 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
     }
     setIsPublishing(true);
     try {
+      // Metadados Reais do Reels para o Backend (Ouro)
+      const reelsMetadata = videoUrl ? {
+         trim: trimRange,
+         overlay: overlayText,
+         text_pos: textPos,
+         music: bgMusic
+      } : null;
+
       const res = await createPostAction({
         content: text,
         post_type: postType,
@@ -147,7 +179,8 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
         background_style: postType === "compartilhar" ? "transparent" : greenGradient,
         is_bold: styles.bold,
         is_italic: styles.italic,
-        status: 'published'
+        status: 'published',
+        metadata: reelsMetadata // Enviando as edições pro backend
       });
 
       if (!res.success) throw new Error(res.error);
@@ -225,6 +258,8 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
           <div style={{ position: "relative", marginBottom: 12 }}>
             <video ref={videoRef} style={{ width: "100%", borderRadius: 16, background: "black" }} />
             
+            <button onClick={toggleCamera} style={{ position: "absolute", top: 10, left: 10, background: "rgba(0,0,0,0.5)", border: 0, borderRadius: "50%", width: 34, height: 34, color: "white", display: "grid", placeItems: "center" }}><RefreshCcw size={18} /></button>
+
             <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 20, alignItems: "center" }}>
               {cameraMode === "photo" ? (
                 <button onClick={takePhoto} style={{ background: "white", border: 0, borderRadius: "50%", width: 60, height: 60, display: "grid", placeItems: "center", boxShadow: "0 4px 15px rgba(0,0,0,0.3)" }}>
@@ -245,7 +280,7 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
             </div>
 
             <button onClick={stopCamera} style={{ position: "absolute", top: 10, right: 10, background: "rgba(0,0,0,0.5)", border: 0, borderRadius: "50%", width: 34, height: 34, color: "white", display: "grid", placeItems: "center" }}><X size={18} /></button>
-            {isRecordingVideo && <div style={{ position: "absolute", top: 10, left: 10, background: "#ef4444", color: "white", padding: "4px 12px", borderRadius: 100, fontSize: 10, fontWeight: 900, animation: "pulse 1s infinite" }}>REC</div>}
+            {isRecordingVideo && <div style={{ position: "absolute", top: 10, left: "20%", background: "#ef4444", color: "white", padding: "4px 12px", borderRadius: 100, fontSize: 10, fontWeight: 900, animation: "pulse 1s infinite" }}>REC</div>}
           </div>
         ) : (
           <textarea 
@@ -276,6 +311,53 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
             <Sparkles size={20} color="#f59e0b" style={{ cursor: "pointer" }} />
         </div>
       </div>
+
+      {videoUrl && (
+        <div style={{ marginTop: 24, background: "#000", borderRadius: 24, padding: 12, overflow: "hidden" }}>
+          <div style={{ position: "relative" }}>
+             <video 
+               ref={previewVideoRef} 
+               src={videoUrl} 
+               loop autoPlay muted
+               onTimeUpdate={() => {
+                  if (previewVideoRef.current && previewVideoRef.current.currentTime > trimRange.end) {
+                    previewVideoRef.current.currentTime = trimRange.start;
+                    if (audioRef.current) audioRef.current.currentTime = 0;
+                  }
+               }}
+               style={{ width: "100%", borderRadius: 16 }} 
+             />
+             <div style={{ position: "absolute", top: textPos.y + "%", left: textPos.x + "%", color: "white", fontWeight: 900, fontSize: 24, textShadow: "0 2px 10px rgba(0,0,0,0.5)", pointerEvents: "none" }}>{overlayText}</div>
+          </div>
+
+          <div style={{ padding: "16px 8px" }}>
+             <div style={{ display: "flex", justifyContent: "space-between", color: "white", fontSize: 11, fontWeight: 800, marginBottom: 8 }}>
+                <span>Corte: {trimRange.start}s - {trimRange.end}s</span>
+                <span onClick={() => setVideoUrl(null)} style={{ color: "#ef4444" }}>Remover</span>
+             </div>
+             <div style={{ display: "flex", gap: 8 }}>
+                <input type="range" min="0" max="15" value={trimRange.start} onChange={(e) => setTrimRange(prev => ({ ...prev, start: Number(e.target.value) }))} style={{ flex: 1, accentColor: colors.primaryLight }} />
+                <input type="range" min="0" max="15" value={trimRange.end} onChange={(e) => setTrimRange(prev => ({ ...prev, end: Number(e.target.value) }))} style={{ flex: 1, accentColor: colors.primaryLight }} />
+             </div>
+
+             <input 
+               placeholder="Texto no vídeo..." 
+               value={overlayText} 
+               onChange={(e) => setOverlayText(e.target.value)} 
+               style={{ width: "100%", marginTop: 16, background: "rgba(255,255,255,0.1)", border: 0, padding: 12, borderRadius: 12, color: "white", fontSize: 13 }} 
+             />
+
+             <div style={{ marginTop: 16, display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
+                {["Harpa", "Adoração", "Praise", "Instrumental"].map(track => (
+                  <button key={track} onClick={() => setBgMusic(track === bgMusic ? null : track)} style={{ padding: "6px 16px", borderRadius: 100, border: 0, background: bgMusic === track ? colors.primaryLight : "rgba(255,255,255,0.1)", color: "white", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
+                    🎵 {track}
+                  </button>
+                ))}
+             </div>
+          </div>
+          {bgMusic && <audio ref={audioRef} autoPlay loop style={{ display: "none" }} />}
+        </div>
+      )}
 
       {media && (
         <div style={{ marginTop: 12, position: "relative" }}>
