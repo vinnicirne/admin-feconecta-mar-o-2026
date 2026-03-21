@@ -18,6 +18,12 @@ export default function NewWarRoomPage() {
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'live' | 'create'>('live');
+  
+  // Agendamento
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("");
+  const [verseBase, setVerseBase] = useState("");
 
   useEffect(() => {
     fetchActiveRooms();
@@ -41,8 +47,9 @@ export default function NewWarRoomPage() {
       setLoadingRooms(true);
       const { data } = await supabase
         .from('prayer_rooms')
-        .select('id, title, current_viewers, host_id')
-        .eq('status', 'live')
+        .select('*, host:profiles(full_name)')
+        .in('status', ['live', 'scheduled'])
+        .order('scheduled_for', { ascending: true })
         .order('started_at', { ascending: false });
       setActiveRooms(data || []);
     } catch (err) {
@@ -81,15 +88,20 @@ export default function NewWarRoomPage() {
         return;
       }
 
+      const scheduledTimestamp = isScheduled ? new Date(`${scheduledDate}T${scheduledTime}`).toISOString() : new Date().toISOString();
+
       const { data, error } = await supabase
         .from("prayer_rooms")
         .insert({
           title: title.trim(),
           description: description.trim() || null,
           host_id: user.id,
-          status: "live",
+          status: isScheduled ? "scheduled" : "live",
           max_duration_minutes: duration,
-          started_at: new Date().toISOString(),
+          is_scheduled: isScheduled,
+          scheduled_for: isScheduled ? scheduledTimestamp : null,
+          started_at: isScheduled ? null : new Date().toISOString(),
+          verse_base: verseBase.trim() || null,
           livekit_room_name: `war-room-${user.id}-${Date.now()}`
         })
         .select()
@@ -98,18 +110,29 @@ export default function NewWarRoomPage() {
       if (error) throw error;
 
       // 📢 PUBLICAÇÃO AUTOMÁTICA NO FEED (Para convocar a comunidade)
-      const defaultCopy = `🚨 CONVOCAÇÃO: Acabei de abrir uma Sala de Guerra! TEMA: "${title.trim()}". Venha orar conosco agora! 🙏`;
+      const typeLabel = isScheduled ? '📅 AGENDADO' : '🚨 AGORA';
+      const timeLabel = isScheduled ? `para ${new Date(scheduledTimestamp).toLocaleString('pt-BR')}` : 'imediatamente';
+      const defaultCopy = `${typeLabel}: Acabei de convocar uma Sala de Guerra ${timeLabel}! TEMA: "${title.trim()}". 🙏`;
       
       await supabase.from('posts').insert([{
         profile_id: user.id,
         content: feedCopy.trim() || defaultCopy,
         post_type: 'oracao',
-        background_style: 'linear-gradient(135deg, #059669 0%, #064e3b 100%)',
+        background_style: isScheduled ? 'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)' : 'linear-gradient(135deg, #059669 0%, #064e3b 100%)',
         is_bold: true,
         metadata: { war_room_id: data.id }
       }]);
 
-      router.push(`/war-room/${data.id}`);
+      if (!isScheduled) {
+        router.push(`/war-room/${data.id}`);
+      } else {
+        alert("Sala agendada com sucesso! Ela aparecerá na lista de eventos futuros.");
+        setActiveTab('live');
+        fetchActiveRooms();
+        setTitle("");
+        setDescription("");
+        setVerseBase("");
+      }
     } catch (err: any) {
       alert(`Erro ao criar sala: ${err.message}`);
     } finally {
@@ -182,54 +205,62 @@ export default function NewWarRoomPage() {
         {/* CONTEÚDO DA ABA 1: SALAS ABERTAS */}
         {activeTab === 'live' && (
           <section className="anim-fade-in">
-          <p style={{ fontSize: 11, fontWeight: 900, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
+          
+          {/* 🔴 SEÇÃO AO VIVO */}
+          <p style={{ fontSize: 11, fontWeight: 900, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#ef4444", animation: "pulse 1.5s infinite" }} />
-            Ocorrências em Tempo Real
+            Intercessão ao Vivo
           </p>
           
-          {loadingRooms ? (
-            <div className="card" style={{ padding: 40, textAlign: "center", opacity: 0.5 }}>Carregando reflexos...</div>
-          ) : activeRooms.length === 0 ? (
-            <div className="card" style={{ padding: 40, textAlign: "center", border: "2px dashed var(--line)", background: "transparent" }}>
-              <p className="muted" style={{ margin: 0, fontSize: 13 }}>Nenhuma sala ativa no momento.<br/>Seja o primeiro a interceder!</p>
-            </div>
-          ) : (
-            <div style={{ 
-              display: "grid", 
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", 
-              gap: 20 
-            }}>
-              {activeRooms.map(room => (
-                <div key={room.id} className="card shadow-sm" style={{ padding: 24, display: "flex", alignItems: "center", gap: 16, background: "white", border: "1px solid var(--line)", borderRadius: 20 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 14, background: "var(--primary-soft)", color: "var(--primary)", display: "grid", placeItems: "center", flexShrink: 0 }}>
-                    <Mic2 size={24} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20, marginBottom: 48 }}>
+            {activeRooms.filter(r => r.status === 'live').map(room => (
+              <div key={room.id} className="card shadow-sm" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16, background: "white", borderRadius: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(239,68,68,0.05)", color: "#ef4444", display: "grid", placeItems: "center" }}>
+                    <Mic2 size={20} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                     <strong style={{ fontSize: 16, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.title}</strong>
-                     <span className="muted" style={{ fontSize: 13 }}>{room.current_viewers || 0} orando agora</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button 
-                      onClick={() => router.push(`/war-room/${room.id}`)}
-                      className="button" 
-                      style={{ padding: "10px 18px", borderRadius: 12, fontSize: 12, fontWeight: 800 }}
-                    >
-                      Entrar
-                    </button>
-                    {currentUser?.id === room.host_id && (
-                      <button 
-                        onClick={() => handleEndRoom(room.id)}
-                        className="button" 
-                        style={{ padding: "10px 18px", borderRadius: 12, fontSize: 12, fontWeight: 800, background: "rgba(239, 68, 68, 0.08)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.1)" }}
-                      >
-                        Encerrar
-                      </button>
-                    )}
+                  <div style={{ flex: 1 }}>
+                     <strong style={{ fontSize: 15 }}>{room.title}</strong>
+                     <p className="muted" style={{ fontSize: 12, margin: 0 }}>{room.current_viewers || 0} orando agora</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+                <button onClick={() => router.push(`/war-room/${room.id}`)} className="button" style={{ width: "100%", padding: 12, borderRadius: 14, fontSize: 13 }}>ENRTAR AGORA</button>
+              </div>
+            ))}
+            {activeRooms.filter(r => r.status === 'live').length === 0 && !loadingRooms && (
+               <div style={{ padding: "40px 0", textAlign: "center", border: "2px dashed var(--line)", borderRadius: 24, gridColumn: "1/-1" }}>
+                 <p className="muted" style={{ fontSize: 13 }}>Nenhuma sala ativa. Inicie uma nova!</p>
+               </div>
+            )}
+          </div>
+
+          {/* 📅 SEÇÃO AGENDADAS */}
+          <p style={{ fontSize: 11, fontWeight: 900, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 20, display: "flex", alignItems: "center", gap: 8 }}>
+            <Clock size={14} /> Próximas Vigílias Agendadas
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
+            {activeRooms.filter(r => r.status === 'scheduled').map(room => (
+              <div key={room.id} className="card shadow-sm" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20, background: "white", borderRadius: 24, border: "1px solid var(--line)" }}>
+                <div>
+                   <span style={{ fontSize: 10, fontWeight: 900, background: "var(--primary-soft)", color: "var(--primary)", padding: "4px 8px", borderRadius: 6, textTransform: "uppercase" }}>
+                     📅 {new Date(room.scheduled_for).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} • {new Date(room.scheduled_for).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                   </span>
+                   <h3 style={{ fontSize: 16, fontWeight: 900, margin: "12px 0 4px" }}>{room.title}</h3>
+                   <p className="muted" style={{ fontSize: 12, margin: 0 }}>Líder: {room.host?.full_name || "Convidado"}</p>
+                </div>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => alert("Lembrete ativado! Notificaremos você 5 min antes.")} style={{ flex: 1, padding: "10px", borderRadius: 12, border: "1px solid var(--line)", background: "white", fontSize: 12, fontWeight: 800, cursor: "pointer" }}>🔔 Lembrar-me</button>
+                  <button onClick={() => router.push(`/war-room/${room.id}`)} className="button-soft" style={{ flex: 1, padding: "10px", borderRadius: 12, border: 0, fontSize: 12, fontWeight: 800, cursor: "pointer" }}>Pré-Sala</button>
+                </div>
+              </div>
+            ))}
+            {activeRooms.filter(r => r.status === 'scheduled').length === 0 && !loadingRooms && (
+               <div style={{ padding: "40px 0", textAlign: "center", border: "2px dashed var(--line)", borderRadius: 24, gridColumn: "1/-1" }}>
+                 <p className="muted" style={{ fontSize: 13 }}>Nenhum agendamento para hoje.</p>
+               </div>
+            )}
+          </div>
         </section>
         )}
 
@@ -239,26 +270,56 @@ export default function NewWarRoomPage() {
           <p style={{ fontSize: 11, fontWeight: 900, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 20 }}>
             Convocação Ministerial
           </p>
-          <div className="card shadow-lg" style={{ padding: 32, display: "flex", flexDirection: "column", gap: 24, background: "white", border: "1px solid var(--line)" }}>
-            <h2 style={{ fontSize: 18, fontWeight: 900, margin: 0 }}>Iniciar Nova Sala</h2>
+          <div className="card shadow-lg" style={{ padding: 32, display: "flex", flexDirection: "column", gap: 24, background: "white", border: "1px solid var(--line)", borderRadius: 28 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ fontSize: 18, fontWeight: 900, margin: 0 }}>Nova Convocação</h2>
+              <div style={{ display: "flex", background: "var(--line)", padding: 4, borderRadius: 12 }}>
+                <button onClick={() => setIsScheduled(false)} style={{ padding: "6px 12px", border: 0, borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer", background: !isScheduled ? "white" : "transparent", color: !isScheduled ? "var(--primary)" : "var(--muted)", boxShadow: !isScheduled ? "0 2px 5px rgba(0,0,0,0.05)" : "none" }}>AGORA</button>
+                <button onClick={() => setIsScheduled(true)} style={{ padding: "6px 12px", border: 0, borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: "pointer", background: isScheduled ? "white" : "transparent", color: isScheduled ? "var(--primary)" : "var(--muted)", boxShadow: isScheduled ? "0 2px 5px rgba(0,0,0,0.05)" : "none" }}>AGENDAR</button>
+              </div>
+            </div>
+
+            {isScheduled && (
+              <div className="grid" style={{ gridTemplateColumns: "1.2fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 800, display: "block", marginBottom: 6, color: "var(--muted)" }}>DATA DA VIGÍLIA</label>
+                  <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} className="input" style={{ width: "100%", padding: 12 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 800, display: "block", marginBottom: 6, color: "var(--muted)" }}>HORÁRIO</label>
+                  <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} className="input" style={{ width: "100%", padding: 12 }} />
+                </div>
+              </div>
+            )}
             
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <label style={{ fontSize: 13, fontWeight: 800, display: "block", marginBottom: 8 }}>Título da Oração *</label>
+          <label style={{ fontSize: 13, fontWeight: 800, display: "block", marginBottom: 8 }}>Título da Intercessão *</label>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ex: Intercessão pela Família"
+            placeholder="Ex: Vigília pela Família"
             className="input"
             style={{ width: "100%", padding: "14px 16px" }}
           />
         </div>
 
         <div>
-          <label style={{ fontSize: 13, fontWeight: 800, display: "block", marginBottom: 8 }}>Descrição (opcional)</label>
+          <label style={{ fontSize: 13, fontWeight: 800, display: "block", marginBottom: 8 }}>Versículo Base (Opcional)</label>
+          <input
+            value={verseBase}
+            onChange={(e) => setVerseBase(e.target.value)}
+            placeholder="Ex: Salmos 91:1"
+            className="input"
+            style={{ width: "100%", padding: "14px 16px" }}
+          />
+        </div>
+
+        <div>
+          <label style={{ fontSize: 13, fontWeight: 800, display: "block", marginBottom: 8 }}>Propósito da Oração</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Descreva o foco desta oração..."
+            placeholder="Qual o objetivo principal deste clamor?"
             rows={2}
             style={{ width: "100%", padding: "14px 16px", borderRadius: 16, border: "1px solid rgba(31,41,55,0.14)", background: "rgba(255,255,255,0.78)", resize: "none", font: "inherit", fontSize: 14 }}
           />
@@ -309,17 +370,17 @@ export default function NewWarRoomPage() {
 
             <button
               onClick={handleCreate}
-              disabled={isCreating || !title.trim()}
+              disabled={isCreating || !title.trim() || (isScheduled && (!scheduledDate || !scheduledTime))}
               className="button"
               style={{
                 width: "100%", padding: "16px", fontSize: 15, fontWeight: 900,
-                opacity: (isCreating || !title.trim()) ? 0.5 : 1,
-                cursor: (isCreating || !title.trim()) ? "not-allowed" : "pointer",
+                opacity: (isCreating || !title.trim() || (isScheduled && (!scheduledDate || !scheduledTime))) ? 0.5 : 1,
+                cursor: (isCreating || !title.trim() || (isScheduled && (!scheduledDate || !scheduledTime))) ? "not-allowed" : "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 10
               }}
             >
-              {isCreating ? <Loader2 size={20} className="spin" /> : <Mic2 size={20} />}
-              {isCreating ? "Iniciando..." : "🙏 Iniciar Sala de Guerra"}
+              {isCreating ? <Loader2 size={20} className="spin" /> : (isScheduled ? <Clock size={20} /> : <Mic2 size={20} />)}
+              {isCreating ? "Processando..." : (isScheduled ? "📅 Agendar Convocação" : "🙏 Iniciar Sala Agora")}
             </button>
           </div>
         </section>

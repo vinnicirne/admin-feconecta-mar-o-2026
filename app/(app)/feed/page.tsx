@@ -37,13 +37,13 @@ export default function FeedPage() {
 
   useEffect(() => {
     fetchPosts();
-    fetchLiveRooms();
+    fetchActiveRooms();
 
-    // 🔴 REALTIME: atualiza salas ao vivo automaticamente
+    // 🔴 REALTIME
     const channel = supabase
       .channel('public:prayer_rooms')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'prayer_rooms' }, () => {
-        fetchLiveRooms();
+        fetchActiveRooms();
       })
       .subscribe();
 
@@ -67,21 +67,22 @@ export default function FeedPage() {
     }
   };
 
-  const fetchLiveRooms = async () => {
+  const fetchActiveRooms = async () => {
     try {
       const { data, error } = await supabase
         .from('prayer_rooms')
-        .select('id, title, description, current_viewers, started_at, host_id')
-        .eq('status', 'live')
+        .select('id, title, description, current_viewers, started_at, scheduled_for, status')
+        .in('status', ['live', 'scheduled'])
+        .order('status', { ascending: false }) // 'scheduled' vem depois de 'live' alfabeticamente? Não, 'live' < 'scheduled'. ascending: true levaria live primeiro.
         .order('started_at', { ascending: false });
 
       if (error) {
-        console.error("ERRO AO BUSCAR SALAS AO VIVO:", error.message);
+        console.error("ERRO AO BUSCAR SALAS:", error.message);
         return;
       }
       setLiveRooms(data || []);
     } catch (err) {
-      console.error("ERRO FETCH LIVE ROOMS:", err);
+      console.error("ERRO FETCH ACTIVE ROOMS:", err);
     }
   };
 
@@ -143,32 +144,40 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* 🔴 SALAS DE GUERRA AO VIVO (DESTAQUE MÁXIMO) */}
+      {/* 🔴 SALAS ATIVAS / AGENDADAS */}
       {liveRooms.length > 0 && (
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <p style={{ fontSize: 11, fontWeight: 900, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#ef4444", display: "inline-block", animation: "pulse 1.5s infinite" }} />
-              ORAÇÃO AO VIVO
+            <p style={{ fontSize: 11, fontWeight: 900, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.05em", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--primary)", display: "inline-block", animation: "pulse 1.5s infinite" }} />
+              CONVITE PARA INTERCESSÃO
             </p>
-            <button onClick={fetchLiveRooms} style={{ background: "none", border: 0, cursor: "pointer", fontSize: 10, fontWeight: 700, color: "var(--muted)" }}>Recarregar</button>
+            <button onClick={fetchActiveRooms} style={{ background: "none", border: 0, cursor: "pointer", fontSize: 10, fontWeight: 700, color: "var(--muted)" }}>Recarregar</button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {liveRooms.map(room => (
-              <div key={room.id} className="card" style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, background: "linear-gradient(135deg, rgba(15,118,110,0.08) 0%, rgba(19,78,74,0.06) 100%)", border: "1px solid rgba(15,118,110,0.2)", borderRadius: 24, boxShadow: "0 10px 30px rgba(15,118,110,0.12)" }}>
-                <div style={{ width: 52, height: 52, borderRadius: 16, background: "var(--primary)", display: "grid", placeItems: "center", color: "white", flexShrink: 0, boxShadow: "0 6px 15px rgba(15,118,110,0.3)" }}>
+              <div key={room.id} className="card" style={{ padding: "20px 24px", display: "flex", alignItems: "center", gap: 16, background: room.status === 'live' ? "linear-gradient(135deg, rgba(15,118,110,0.08) 0%, rgba(19,78,74,0.06) 100%)" : "rgba(0,0,0,0.02)", border: room.status === 'live' ? "1px solid rgba(15,118,110,0.2)" : "1px solid var(--line)", borderRadius: 24 }}>
+                <div style={{ width: 52, height: 52, borderRadius: 16, background: room.status === 'live' ? "var(--primary)" : "var(--line)", display: "grid", placeItems: "center", color: room.status === 'live' ? "white" : "var(--muted)", flexShrink: 0 }}>
                   <Mic2 size={24} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 9, fontWeight: 900, color: "#ef4444", background: "rgba(239,68,68,0.1)", padding: "2px 8px", borderRadius: 100 }}>AO VIVO</span>
-                    <span className="muted" style={{ fontSize: 11 }}>{room.current_viewers || 1} oradores</span>
+                    <span style={{ fontSize: 9, fontWeight: 900, color: room.status === 'live' ? "#ef4444" : "var(--primary)", background: room.status === 'live' ? "rgba(239,68,68,0.1)" : "var(--primary-soft)", padding: "2px 8px", borderRadius: 100 }}>
+                      {room.status === 'live' ? "AO VIVO" : "AGENDADO"}
+                    </span>
+                    {room.status === 'scheduled' && room.scheduled_for && (
+                      <span className="muted" style={{ fontSize: 10, fontWeight: 800 }}>
+                        {new Date(room.scheduled_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                    {room.status === 'live' && (
+                      <span className="muted" style={{ fontSize: 11 }}>{room.current_viewers || 0} na sala</span>
+                    )}
                   </div>
                   <strong style={{ fontSize: 15, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{room.title}</strong>
-                  <span className="muted" style={{ fontSize: 11 }}>Toque para se juntar à intercessão</span>
                 </div>
-                <Link href={`/war-room/${room.id}`} style={{ padding: "12px 24px", borderRadius: 100, background: "var(--primary)", color: "white", fontWeight: 900, fontSize: 13, textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0, boxShadow: "0 8px 16px rgba(15,118,110,0.2)" }}>
-                  🙏 Participar
+                <Link href={`/war-room/${room.id}`} style={{ padding: "10px 20px", borderRadius: 100, background: room.status === 'live' ? "var(--primary)" : "var(--line)", color: room.status === 'live' ? "white" : "var(--muted)", fontWeight: 800, fontSize: 12, textDecoration: "none", whiteSpace: "nowrap" }}>
+                  {room.status === 'live' ? "Participar" : "Ver Detalhes"}
                 </Link>
               </div>
             ))}
