@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Home, 
   Search, 
@@ -21,8 +21,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const primaryColor = "var(--primary)";
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const isAuthPage = pathname.includes("/auth");
 
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted) return <div style={{ background: "#f8fafc", minHeight: "100vh" }}>{children}</div>;
   if (isAuthPage) return <>{children}</>;
 
   const menuItems = [

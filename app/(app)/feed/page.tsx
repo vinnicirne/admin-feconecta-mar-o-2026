@@ -100,71 +100,81 @@ export default function FeedPage() {
               </div>
             </div>
             
-            {/* Conteúdo de Texto c/ Suporte a Estilos */}
-            <div style={{ 
-              background: post.background_style || "transparent", 
-              padding: post.background_style !== "transparent" ? "40px 24px" : "0 24px 20px",
-              color: post.background_style?.includes("gradient") ? "white" : "inherit"
-            }}>
-              <p style={{ 
-                margin: 0, 
-                fontSize: post.background_style !== "transparent" ? "1.4rem" : "1.05rem", 
-                lineHeight: 1.6, 
-                fontWeight: post.is_bold ? "800" : "500",
-                fontStyle: post.is_italic ? "italic" : "normal",
-                fontFamily: post.font_family === "Serif" ? "serif" : "inherit",
-                textAlign: post.background_style !== "transparent" ? "center" : "left"
-              }}>
-                {post.content}
-              </p>
-            </div>
+            {/* Renderização Inteligente por Tipo de Post */}
+            <PostContent post={post} />
 
-            {/* 🔴 RENDERIZAÇÃO DE MÍDIA (NEW) */}
-            {post.image_url && (
-              <div style={{ padding: "0 12px 12px" }}>
-                {post.media_type === 'image' && (
-                  <img src={post.image_url} style={{ width: "100%", borderRadius: 24, maxHeight: 500, objectFit: "cover" }} />
-                )}
-                {post.media_type === 'video' && (
-                  <video src={post.image_url} controls style={{ width: "100%", borderRadius: 24, maxHeight: 500 }} />
-                )}
-                {post.media_type === 'audio' && (
-                  <div style={{ 
-                    background: "rgba(15, 118, 110, 0.05)", 
-                    padding: "20px", 
-                    borderRadius: 20, 
-                    display: "flex", 
-                    alignItems: "center", 
-                    gap: 16,
-                    border: "1px solid rgba(15, 118, 110, 0.1)" 
-                  }}>
-                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--primary)", color: "white", display: "grid", placeItems: "center" }}>
-                       <Volume2 size={24} />
-                    </div>
-                    <audio src={post.image_url} controls style={{ flex: 1, height: 32 }} />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Footer de Interações */}
-            <div style={{ padding: "16px 24px", display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--line)" }}>
-               <div style={{ display: "flex", gap: 16 }}>
-                  <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 14, fontWeight: 700, color: "var(--muted)" }}>
-                     <Heart size={20} className="danger" /> Fé
-                  </button>
-                  <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 14, fontWeight: 700, color: "var(--muted)" }}>
-                     <MessageSquare size={20} /> Comentar
-                  </button>
-               </div>
-               <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ width: 36, height: 36, borderRadius: 10, background: "var(--line)", border: 0 }}><Repeat size={18} className="muted" /></button>
-                  <button style={{ width: 36, height: 36, borderRadius: 10, background: "var(--line)", border: 0 }}><Copy size={18} className="muted" /></button>
-               </div>
-            </div>
+            {/* Footer de Interações Baseado no Tipo */}
+            <PostInteractions post={post} />
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function PostContent({ post }: { post: any }) {
+  const isEdificar = post.post_type === "edificar";
+  const isOracao = post.post_type === "oracao";
+
+  return (
+    <div style={{ 
+      background: post.background_style || (isEdificar ? "linear-gradient(135deg, #059669 0%, #064e3b 100%)" : "transparent"), 
+      padding: post.background_style !== "transparent" || isEdificar ? "48px 24px" : "0 24px 20px",
+      color: (post.background_style?.includes("gradient") || isEdificar) ? "white" : "inherit",
+      textAlign: (post.background_style !== "transparent" || isEdificar) ? "center" : "left",
+      position: "relative"
+    }}>
+      {isOracao && (
+        <div style={{ position: "absolute", top: 12, right: 24, padding: "4px 12px", borderRadius: 100, background: "rgba(15, 118, 110, 0.1)", color: "var(--primary)", fontSize: 10, fontWeight: 900 }}>
+          🙏 PEDIDO DE ORAÇÃO
+        </div>
+      )}
+      
+      <p style={{ 
+        margin: 0, 
+        fontSize: (post.background_style !== "transparent" || isEdificar) ? "1.5rem" : "1.05rem", 
+        lineHeight: 1.6, 
+        fontWeight: (post.is_bold || isEdificar) ? "800" : "500",
+        fontStyle: post.is_italic ? "italic" : "normal",
+        fontFamily: post.font_family === "Serif" ? "serif" : "inherit"
+      }}>
+        {post.content}
+      </p>
+
+      {isOracao && (
+        <button style={{ 
+          marginTop: 24, background: "linear-gradient(135deg, #10b981, #065f46)", border: 0, 
+          borderRadius: 100, padding: "12px 32px", color: "white", fontWeight: 900, fontSize: 14,
+          boxShadow: "0 10px 20px rgba(6, 95, 70, 0.2)"
+        }}>
+          🙏 ORAR POR MIM
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PostInteractions({ post }: { post: any }) {
+  const isOracao = post.post_type === "oracao";
+  
+  return (
+    <div style={{ padding: "16px 24px", display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--line)", background: "white" }}>
+        <div style={{ display: "flex", gap: 20 }}>
+          <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 700, color: "var(--muted)" }}>
+              <Heart size={18} className="danger" /> <span style={{ color: "#ef4444" }}>128</span>
+          </button>
+          <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 700, color: "var(--muted)" }}>
+              <MessageSquare size={18} /> 34
+          </button>
+          {isOracao && (
+            <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 800, color: "var(--primary)" }}>
+                🙏 <span style={{ textDecoration: "underline" }}>12 orando</span>
+            </button>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={{ width: 36, height: 36, borderRadius: 10, background: "var(--line)", border: 0, display: "grid", placeItems: "center" }}><Share2 size={16} className="muted" /></button>
+        </div>
     </div>
   );
 }
