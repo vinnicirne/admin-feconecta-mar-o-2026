@@ -17,26 +17,47 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error: authError, data } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { error: authError, data } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      setError("Credenciais inválidas");
-      setLoading(false);
-    } else {
-      // Redirecionamento seguro: Membros comuns sempre vão para o Feed (/)
-      // Apenas administradores explícitos acessam o dashboard
-      const isAdmin = data.user?.app_metadata?.role === 'admin' || data.user?.user_metadata?.role === 'admin';
-      
-      if (isAdmin) {
-         router.push("/dashboard");
-      } else {
-         router.push("/"); // Usuário comum vai para o Feed
-         router.refresh();
+      if (authError) {
+        console.error("Erro de Autenticação Supabase:", authError);
+        setError(authError.message === "Invalid login credentials" ? "Credenciais inválidas" : authError.message);
+        setLoading(false);
+        return;
       }
+
+      if (data?.user) {
+        // Redirecionamento seguro: Membros comuns sempre vão para o Feed (/)
+        // Apenas administradores explícitos acessam o dashboard
+        const isAdmin = data.user?.app_metadata?.role === 'admin' || data.user?.user_metadata?.role === 'admin';
+        
+        console.log("Login realizado com sucesso. Redirecionando...", { isAdmin });
+
+        if (isAdmin) {
+          router.push("/dashboard");
+        } else {
+          // Em mobile, às vezes o router.push("/") não recarrega o estado adequadamente se já estivermos na home
+          // Forçamos o refresh ou usamos window.location se necessário
+          router.push("/");
+          router.refresh();
+          
+          // Fallback para garantir que o modal feche ou a página recarregue se o router falhar
+          setTimeout(() => {
+            if (window.location.pathname === "/") {
+               window.location.reload();
+            }
+          }, 1000);
+        }
+      }
+    } catch (err: any) {
+      console.error("Erro Inesperado no Login:", err);
+      setError("Ocorreu um erro inesperado. Tente novamente.");
+      setLoading(false);
     }
   };
 

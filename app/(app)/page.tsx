@@ -27,7 +27,8 @@ import {
   prayPostAction,
   commentPostAction,
   deleteCommentAction,
-  updateCommentAction
+  updateCommentAction,
+  followUserAction
 } from "@/app/actions/interaction-actions";
 
 // 🕒 FORMATADOR DE TEMPO RELATIVO
@@ -61,9 +62,9 @@ function FollowButton({ isFollowing, targetId, authUser }: { isFollowing: boolea
     }
     setLoading(true);
     const res = await followUserAction(targetId);
-    if (res.success) {
+    if (res.success && res.isFollowing !== undefined) {
       setFollowing(res.isFollowing);
-    } else {
+    } else if (!res.success) {
       alert(res.error);
     }
     setLoading(false);
