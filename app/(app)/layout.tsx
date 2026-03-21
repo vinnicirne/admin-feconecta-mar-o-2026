@@ -303,7 +303,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         .faith-sidebar { display: none !important; }
         @media (min-width: 1024px) {
           .faith-sidebar { display: flex !important; }
-          .app-main { margin-left: 240px; }
+          .app-main { margin-left: 240px; flex: 1; width: calc(100% - 240px); }
         }
       `}</style>
 

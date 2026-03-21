@@ -71,8 +71,16 @@ export default async function WarRoomPage() {
                </div>
 
                {room.status === 'live' && (
-                  <div style={{ fontSize: 10, fontWeight: 800, color: "#10b981", marginBottom: 16, textAlign: "center" }}>
-                    🛡️ AUTO-ENCERRAMENTO ATIVO
+                  <div style={{ background: "rgba(16, 185, 129, 0.05)", padding: 16, borderRadius: 16, marginBottom: 16 }}>
+                    <div style={{ fontSize: 10, fontWeight: 900, color: "#059669", textTransform: "uppercase", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                      <ShieldCheck size={12} /> Auto-Encerramento Ativo
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, background: "white", padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line)" }}>
+                        👑 {room.host?.full_name} (Host)
+                      </span>
+                      {/* Futuramente: Mapear participantes reais via join em tempo real no dashboard */}
+                    </div>
                   </div>
                )}
 
