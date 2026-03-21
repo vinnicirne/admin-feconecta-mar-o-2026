@@ -131,8 +131,8 @@ function PostContent({ post }: { post: any }) {
       )}
       
       <p style={{ 
-        margin: 0, 
-        fontSize: (post.background_style !== "transparent" || isEdificar) ? "1.5rem" : "1.05rem", 
+        margin: "0 0 16px 0", 
+        fontSize: (post.background_style !== "transparent" || isEdificar) ? "1.4rem" : "1rem", 
         lineHeight: 1.6, 
         fontWeight: (post.is_bold || isEdificar) ? "800" : "500",
         fontStyle: post.is_italic ? "italic" : "normal",
@@ -140,6 +140,21 @@ function PostContent({ post }: { post: any }) {
       }}>
         {post.content}
       </p>
+
+      {post.image_url && post.media_type === 'image' && (
+        <img src={post.image_url} style={{ width: "100%", borderRadius: 20, marginTop: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }} />
+      )}
+
+      {post.image_url && post.media_type === 'video' && (
+        <video src={post.image_url} controls style={{ width: "100%", borderRadius: 20, marginTop: 12, background: "black", maxHeight: 400 }} />
+      )}
+
+      {post.image_url && post.media_type === 'audio' && (
+        <div style={{ marginTop: 12, background: "rgba(0,0,0,0.05)", padding: "12px 16px", borderRadius: 16, display: "flex", alignItems: "center", gap: 12 }}>
+           <Volume2 size={20} className="muted" />
+           <audio src={post.image_url} controls style={{ flex: 1, height: 32 }} />
+        </div>
+      )}
 
       {isOracao && (
         <button style={{ 

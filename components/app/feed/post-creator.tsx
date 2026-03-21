@@ -265,8 +265,8 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
             <span onClick={() => setStyles(s => ({ ...s, bold: !s.bold }))} style={{ fontSize: 16, fontWeight: styles.bold ? 900 : 500, color: styles.bold ? colors.primary : colors.text, cursor: "pointer" }}>B</span>
             <span onClick={() => setStyles(s => ({ ...s, italic: !s.italic }))} style={{ fontSize: 16, fontStyle: "italic", fontWeight: styles.italic ? 900 : 500, color: styles.italic ? colors.primary : colors.text, cursor: "pointer" }}>I</span>
             <ImageIcon onClick={() => fileInputRef.current?.click()} size={20} color={media ? colors.primaryLight : colors.primary} style={{ cursor: "pointer" }} />
-            <Settings onClick={() => startCamera("photo")} size={20} color={(isCameraActive && cameraMode === "photo") ? colors.primaryLight : colors.primary} style={{ cursor: "pointer" }} title="Foto" />
-            <Video onClick={() => startCamera("video")} size={20} color={(isCameraActive && cameraMode === "video") ? colors.primaryLight : colors.primary} style={{ cursor: "pointer" }} title="Vídeo" />
+            <Settings onClick={() => startCamera("photo")} size={20} color={(isCameraActive && cameraMode === "photo") ? colors.primaryLight : colors.primary} style={{ cursor: "pointer" }} />
+            <Video onClick={() => startCamera("video")} size={20} color={(isCameraActive && cameraMode === "video") ? colors.primaryLight : colors.primary} style={{ cursor: "pointer" }} />
             <Mic 
               onClick={isRecording ? stopRecording : startRecording} 
               size={20} 
