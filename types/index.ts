@@ -76,7 +76,7 @@ export type ManagedPost = {
   authorUsername: string;
   type: PostType;
   createdAt: string;
-  engagement: string;
+  engagement: number;
   engagementValue: number;
   reports: number;
   sensitive: boolean;
@@ -87,6 +87,9 @@ export type ManagedPost = {
   commentsCount: number;
   interactionsSummary: string;
   communityName?: string;
+  moderationNotes?: string;
+  reachLimit?: boolean;
+  aiIncidentReport?: string;
 };
 
 export type ReportCategory =
