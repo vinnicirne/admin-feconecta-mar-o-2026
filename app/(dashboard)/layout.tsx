@@ -18,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   
   // 🛡️ PROTEÇÃO DE ROTA: Apenas Administradores logados entram aqui
   if (!authUser) {
-    redirect("/login"); // Se não estiver logado, vai para o login
+    redirect("/admin-login"); // Nova rota exclusiva administrativa
   }
 
   const isAdmin = authUser?.app_metadata?.role === 'admin' || authUser?.user_metadata?.role === 'admin';

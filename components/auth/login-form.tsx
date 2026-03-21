@@ -12,6 +12,8 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const isAdminLogin = typeof window !== 'undefined' && window.location.pathname.includes('/admin-login');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -32,26 +34,23 @@ export function LoginForm() {
       }
 
       if (data?.user) {
-        // Redirecionamento seguro: Membros comuns sempre vão para o Feed (/)
-        // Apenas administradores explícitos acessam o dashboard
         const isAdmin = data.user?.app_metadata?.role === 'admin' || data.user?.user_metadata?.role === 'admin';
         
-        console.log("Login realizado com sucesso. Redirecionando...", { isAdmin });
+        // 🛡️ VALIDAÇÃO DE ACESSO DASHBOARD
+        if (isAdminLogin && !isAdmin) {
+          setError("Acesso negado. Esta área é exclusiva para administradores.");
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
 
+        // REDIRECIONAMENTO INTELIGENTE
         if (isAdmin) {
           router.push("/dashboard");
         } else {
-          // Em mobile, às vezes o router.push("/") não recarrega o estado adequadamente se já estivermos na home
-          // Forçamos o refresh ou usamos window.location se necessário
+          // Membro comum
           router.push("/");
           router.refresh();
-          
-          // Fallback para garantir que o modal feche ou a página recarregue se o router falhar
-          setTimeout(() => {
-            if (window.location.pathname === "/") {
-               window.location.reload();
-            }
-          }, 1000);
         }
       }
     } catch (err: any) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 import { 
   Home, 
@@ -30,7 +30,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [activeFeatures, setActiveFeatures] = useState<Set<string>>(new Set());
+  const router = useRouter();
   
   const isAuthPage = pathname.includes("/login") || pathname.includes("/signup");
 
@@ -38,25 +40,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setMounted(true); 
     if (!supabase) return;
     
-    checkUser();
-    fetchFeatures();
+    const initAuth = async () => {
+      setLoading(true);
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      setUser(authUser);
+      
+      // 🛡️ GUARDA DE NAVEGAÇÃO
+      if (!isAuthPage && !authUser) {
+        router.push("/login");
+      } else if (isAuthPage && authUser) {
+        router.push("/");
+      }
+      
+      setLoading(false);
+      fetchFeatures();
+    };
 
-    const fetchSubscription = supabase
-      .channel('public:app_features')
-      .on('postgres_changes', { event: '*', table: 'app_features', schema: 'public' }, () => {
-        fetchFeatures();
-      })
-      .subscribe();
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
-      setUser(session?.user || null);
+      const newUser = session?.user || null;
+      setUser(newUser);
+      
+      if (!isAuthPage && !newUser) {
+        router.push("/login");
+      }
     });
 
     return () => {
       subscription.unsubscribe();
-      supabase.removeChannel(fetchSubscription);
     };
-  }, [supabase]);
+  }, [supabase, pathname]);
 
   const fetchFeatures = async () => {
     if (!supabase) return;
@@ -73,7 +87,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setUser(data.user);
   };
 
-  if (!mounted) return <div style={{ background: "#f8fafc", minHeight: "100vh" }}>{children}</div>;
+  if (!mounted || loading) {
+    if (isAuthPage) return <>{children}</>;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100vh", background: "#f8fafc", gap: 16 }}>
+        <Sparkles size={32} className="spin primary" />
+        <p style={{ fontSize: 13, fontWeight: 800, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 1.5 }}>Sincronizando Fé...</p>
+      </div>
+    );
+  }
+
   if (isAuthPage) return <>{children}</>;
 
   const menuItems = [
