@@ -6,31 +6,49 @@ import {
   Home, 
   Search, 
   Bell, 
-  User, 
+  User as UserIcon, 
   LayoutDashboard, 
   BookOpen, 
   StickyNote, 
   Sparkles,
   Plus,
-  X
+  X,
+  Lock,
+  LogIn
 } from "lucide-react";
 import Link from "next/link";
 import { PostCreator } from "@/components/app/feed/post-creator";
+import { supabase } from "@/lib/supabase";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const primaryColor = "var(--primary)";
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const isAuthPage = pathname.includes("/auth");
+  const [user, setUser] = useState<any>(null);
+  
+  const isAuthPage = pathname.includes("/login") || pathname.includes("/signup");
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { 
+    setMounted(true); 
+    checkUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkUser = async () => {
+    const { data } = await supabase.auth.getUser();
+    setUser(data.user);
+  };
 
   if (!mounted) return <div style={{ background: "#f8fafc", minHeight: "100vh" }}>{children}</div>;
   if (isAuthPage) return <>{children}</>;
 
   const menuItems = [
-    { label: "Feed", icon: Home, href: "/feed" },
+    { label: "Feed", icon: Home, href: "/" },
     { label: "Bíblia", icon: BookOpen, href: "/bible" },
     { label: "POST", icon: Plus, onClick: () => setIsCreateModalOpen(true), isFloating: true }, 
     { label: "Notas", icon: StickyNote, href: "/notes" },
@@ -46,19 +64,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         backdropFilter: "blur(20px)", borderBottom: "1px solid var(--line)", zIndex: 1050,
         display: "flex", alignItems: "center", padding: "0 40px"
       }}>
-         <div style={{ display: "flex", alignItems: "center", gap: 12, marginRight: 40 }}>
+         <Link href="/" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 12, marginRight: 40 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--primary)", display: "grid", placeItems: "center", color: "white" }}>
                <Sparkles size={20} />
             </div>
             <span style={{ fontWeight: 900, fontSize: 18, letterSpacing: "-0.5px" }}>FéConecta</span>
-         </div>
+         </Link>
 
          <div style={{ display: "flex", gap: 8, flex: 1 }}>
             {menuItems.filter(i => !i.isFloating).map((item) => (
               <Link key={item.label} href={item.href!} style={{ 
                 padding: "8px 16px", borderRadius: 10, display: "flex", alignItems: "center", gap: 10,
-                textDecoration: "none", color: pathname === item.href ? "var(--primary)" : "var(--muted)",
-                background: pathname === item.href ? "var(--primary-soft)" : "transparent",
+                textDecoration: "none", color: (pathname === item.href || (item.href === "/" && pathname === "/")) ? "var(--primary)" : "var(--muted)",
+                background: (pathname === item.href || (item.href === "/" && pathname === "/")) ? "var(--primary-soft)" : "transparent",
                 fontWeight: 700, fontSize: 14, transition: "0.2s"
               }}>
                 <item.icon size={18} /> {item.label}
@@ -71,12 +89,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                <Search size={18} className="muted" style={{ position: "absolute", left: 12, top: 10 }} />
                <input placeholder="Buscar no refúgio..." style={{ padding: "8px 16px 8px 40px", borderRadius: 10, border: "0", background: "var(--line)", width: 220, fontSize: 13 }} />
             </div>
-            <Link href="/dashboard" style={{ padding: "10px 16px", borderRadius: 12, border: "1px solid var(--line)", textDecoration: "none", fontSize: 13, fontWeight: 700, color: "black", display: "flex", alignItems: "center", gap: 8 }}>
-               <LayoutDashboard size={16} /> Painel ADM
-            </Link>
-            <Link href="/profile/marcos_silva" style={{ width: 40, height: 40, borderRadius: 12, background: "var(--primary-soft)", display: "grid", placeItems: "center", overflow: "hidden" }}>
-                <User size={20} className="primary" />
-            </Link>
+
+            {user ? (
+              <>
+                <Link href="/dashboard" style={{ padding: "10px 16px", borderRadius: 12, border: "1px solid var(--line)", textDecoration: "none", fontSize: 13, fontWeight: 700, color: "black", display: "flex", alignItems: "center", gap: 8 }}>
+                   <LayoutDashboard size={16} /> Painel ADM
+                </Link>
+                <Link href="/profile/me" style={{ width: 40, height: 40, borderRadius: 12, background: "var(--primary-soft)", display: "grid", placeItems: "center", overflow: "hidden" }}>
+                    <UserIcon size={20} className="primary" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/login" style={{ padding: "10px 20px", borderRadius: 12, textDecoration: "none", fontSize: 14, fontWeight: 800, color: "var(--primary)" }}>
+                   Entrar
+                </Link>
+                <Link href="/signup" style={{ padding: "10px 24px", borderRadius: 12, background: "var(--primary)", color: "white", textDecoration: "none", fontSize: 14, fontWeight: 800, boxShadow: "0 10px 20px var(--primary-soft)" }}>
+                   Criar Conta
+                </Link>
+              </>
+            )}
          </div>
       </nav>
 
@@ -86,13 +118,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         borderBottom: "1px solid var(--line)", zIndex: 1050, display: "flex", alignItems: "center", 
         justifyContent: "space-between", padding: "0 20px"
       }}>
-         <span style={{ fontWeight: 800, fontSize: 17 }}>FéConecta</span>
+         <Link href="/" style={{ textDecoration: "none", color: "inherit", fontWeight: 800, fontSize: 17 }}>FéConecta</Link>
          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <button style={{ width: 38, height: 38, borderRadius: 12, border: 0, background: "var(--line)", display: "grid", placeItems: "center" }}><Search size={19} className="muted" /></button>
-            <button style={{ width: 38, height: 38, borderRadius: 12, border: 0, background: "var(--line)", display: "grid", placeItems: "center" }}><Bell size={19} className="muted" /></button>
-            <Link href="/profile/marcos_silva" style={{ width: 38, height: 38, borderRadius: 12, background: "var(--primary-soft)", display: "grid", placeItems: "center", overflow: "hidden" }}>
-                <User size={20} className="primary" />
-            </Link>
+            
+            {user ? (
+               <Link href="/profile/me" style={{ width: 38, height: 38, borderRadius: 12, background: "var(--primary-soft)", display: "grid", placeItems: "center", overflow: "hidden" }}>
+                   <UserIcon size={20} className="primary" />
+               </Link>
+            ) : (
+               <Link href="/login" style={{ width: 38, height: 38, borderRadius: 12, background: "var(--primary-soft)", display: "grid", placeItems: "center" }}>
+                   <LogIn size={20} className="primary" />
+               </Link>
+            )}
          </div>
       </header>
 
@@ -101,7 +139,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      {/* 🔴 MOBILE BOTTOM NAV (ESTILO PREMIUM CLARO) */}
+      {/* 🔴 MOBILE BOTTOM NAV */}
       <nav className="mobile-bottom-nav" style={{ 
         position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", 
         width: "92%", height: 72, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(20px)",
@@ -121,7 +159,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                </div>
              )
           }
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (item.href === "/" && pathname === "/");
           return (
             <Link key={item.label} href={item.href!} style={{ 
               display: "flex", flexDirection: "column", alignItems: "center", gap: 2, 
@@ -134,7 +172,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      {/* 🔴 MODAL GLOBAL DE CRIAÇÃO (ABERTURA DIRETA) */}
+      {/* 🔴 MODAL GLOBAL DE CRIAÇÃO */}
       {isCreateModalOpen && (
         <div style={{ 
           position: "fixed", top: 0, left: 0, width: "100%", height: "100%", 
@@ -152,7 +190,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                  </button>
               </div>
               
-              {/* O Coração do Editor (Ativo Instantaneamente) */}
               <div onClick={(e) => e.stopPropagation()}>
                  <PostCreator forceExpanded />
               </div>

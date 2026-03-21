@@ -18,49 +18,61 @@ export function LoginForm() {
     setError(null);
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { error: authError, data } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (authError) {
-      setError("Credenciais invalidas");
+      setError("Credenciais inválidas");
       setLoading(false);
     } else {
-      router.push("/dashboard");
+      // Redirecionamento inteligente: se estiver tentando acessar o admin, vai pro dashboard
+      // Se for apenas login de membro, fica na página atual ou vai pro feed
+      const isDashboardAttempt = window.location.pathname.includes("/dashboard") || window.location.pathname.includes("/login");
+      if (isDashboardAttempt) {
+         router.push("/dashboard");
+      } else {
+         router.refresh(); // Fica onde está e atualiza os componentes
+      }
     }
   };
+
+  const isFeed = typeof window !== 'undefined' && !window.location.pathname.includes('/dashboard');
 
   return (
     <form
       className="card"
       onSubmit={handleSubmit}
       suppressHydrationWarning
-      style={{ padding: 42, width: "min(420px, 100%)", borderRadius: 24 }}
+      style={{ padding: 42, width: "min(420px, 100%)", borderRadius: 24, background: "white" }}
     >
-      <p className="pill">Acesso Administrativo</p>
-      <h1 style={{ marginBottom: 16 }}>Entrar</h1>
+      <p className="pill" style={{ background: isFeed ? "var(--primary-soft)" : "rgba(0,0,0,0.05)", color: isFeed ? "var(--primary)" : "inherit" }}>
+        {isFeed ? "🛡️ Espaço Seguro" : "Acesso Administrativo"}
+      </p>
+      <h1 style={{ marginBottom: 16, fontSize: 24, fontWeight: 900 }}>Entrar</h1>
       
       {error && (
-        <div style={{ background: "rgba(239, 68, 68, 0.1)", color: "rgb(239, 68, 68)", padding: 12, borderRadius: 12, marginBottom: 16, fontSize: 14 }}>
+        <div style={{ background: "rgba(239, 68, 68, 0.1)", color: "rgb(239, 68, 68)", padding: 12, borderRadius: 12, marginBottom: 16, fontSize: 13, fontWeight: 700 }}>
           {error}
         </div>
       )}
 
       <div className="grid" style={{ gap: 16 }} suppressHydrationWarning>
-        <label>
-          <span>Email de acesso</span>
+        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--muted)" }}>Email</span>
           <input
             className="input"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            placeholder="admin@feconecta.com"
+            placeholder="exemplo@email.com"
+            style={{ padding: "12px 16px", borderRadius: 12, border: "1px solid var(--line)", outline: "none" }}
           />
         </label>
-        <label>
-          <span>Senha</span>
+        <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--muted)" }}>Senha</span>
           <input
             className="input"
             type="password"
@@ -68,6 +80,7 @@ export function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             placeholder="••••••••"
+            style={{ padding: "12px 16px", borderRadius: 12, border: "1px solid var(--line)", outline: "none" }}
           />
         </label>
       </div>
@@ -77,13 +90,13 @@ export function LoginForm() {
           className="button"
           type="submit"
           disabled={loading}
-          style={{ width: "100%", opacity: loading ? 0.7 : 1 }}
+          style={{ width: "100%", opacity: loading ? 0.7 : 1, background: "var(--primary)", border: 0, color: "white", padding: "14px", borderRadius: 14, fontWeight: 900, cursor: "pointer" }}
         >
-          {loading ? "Autenticando..." : "Entrar no Painel"}
+          {loading ? "Autenticando..." : "Entrar no Refúgio"}
         </button>
         <div style={{ textAlign: "center" }}>
-          <Link href="/signup" style={{ color: "var(--primary)", fontSize: 14, textDecoration: "none", opacity: 0.8 }}>
-            Criar conta de administrador
+          <Link href="/signup" style={{ color: "var(--primary)", fontSize: 14, textDecoration: "none", fontWeight: 700 }}>
+            {isFeed ? "Não sou membro? Criar conta" : "Criar conta de administrador"}
           </Link>
         </div>
       </div>
