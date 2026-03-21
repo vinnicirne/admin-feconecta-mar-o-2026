@@ -50,18 +50,29 @@ export default function WarRoomPage() {
   }, [id]);
 
   useEffect(() => {
-    if (room?.started_at && room?.max_duration_minutes) {
-      timerRef.current = setInterval(() => {
+    if (room?.status === 'live' && room?.started_at && room?.max_duration_minutes) {
+      timerRef.current = setInterval(async () => {
         const start = new Date(room.started_at).getTime();
         const maxMs = room.max_duration_minutes * 60 * 1000;
         const now = Date.now();
         const spent = now - start;
         const remaining = Math.max(0, Math.floor((maxMs - spent) / 1000));
+        
         setTimeLeft(remaining);
+
+        // 🛑 ENCERRAMENTO AUTOMÁTICO AO ZERAR
+        if (remaining <= 0) {
+          clearInterval(timerRef.current);
+          await supabase.from("prayer_rooms").update({ 
+            status: "ended", 
+            ended_at: new Date().toISOString() 
+          }).eq("id", id);
+          router.push("/war-room/new");
+        }
       }, 1000);
     }
     return () => clearInterval(timerRef.current);
-  }, [room]);
+  }, [room, id, router, supabase]);
 
   const loadUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -180,7 +191,7 @@ export default function WarRoomPage() {
               {isPreRoom ? "PRÓXIMA VIGÍLIA" : "AO VIVO AGORA"}
             </span>
             <span style={{ fontSize: 13, fontWeight: 700, color: "var(--muted)", display: "flex", alignItems: "center", gap: 4 }}>
-              • <Users size={14} /> {room.current_viewers || 0} pessoas
+              • <Users size={14} /> {room.current_viewers || 0} seguidores
             </span>
           </div>
         </div>
@@ -274,7 +285,7 @@ export default function WarRoomPage() {
             </div>
 
             <div style={{ background: "rgba(255,255,255,0.08)", padding: 24, borderRadius: 24, border: "1px solid rgba(255,255,255,0.05)" }}>
-               <h2 style={{ fontSize: 20, fontWeight: 900, margin: "0 0 8px" }}>🇧🇷 {room.title}</h2>
+               <h2 style={{ fontSize: 20, fontWeight: 900, margin: "0 0 8px" }}>{room.title}</h2>
                <p style={{ margin: 0, opacity: 0.7, fontSize: 13, lineHeight: 1.5 }}>{room.description || "Unidos em um só propósito de intercessão profética."}</p>
             </div>
 
