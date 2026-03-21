@@ -64,6 +64,8 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
     if (forceExpanded || initialCitation) setIsExpanded(true);
   }, [forceExpanded, initialCitation]);
 
+  const [isDragging, setIsDragging] = useState(false);
+  
   // 📸 LÓGICA DE CÂMERA (FOTO + VÍDEO + FACING)
   const startCamera = async (mode: "photo" | "video") => {
     setCameraMode(mode);
@@ -80,6 +82,22 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
     } catch (e) {
       alert("Erro ao abrir câmera. Verifique as permissões.");
     }
+  };
+
+  const handleDragStart = (e: any) => {
+    setIsDragging(true);
+  };
+
+  const handleDragMove = (e: any) => {
+    if (!isDragging) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setTextPos({ x, y });
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
   };
 
   const toggleCamera = () => {
@@ -314,11 +332,19 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
 
       {videoUrl && (
         <div style={{ marginTop: 24, background: "#000", borderRadius: 24, padding: 12, overflow: "hidden" }}>
-          <div style={{ position: "relative" }}>
+          <div 
+             style={{ position: "relative", cursor: isDragging ? "grabbing" : "crosshair" }}
+             onMouseDown={handleDragStart}
+             onMouseMove={handleDragMove}
+             onMouseUp={handleDragEnd}
+             onMouseLeave={handleDragEnd}
+          >
              <video 
                ref={previewVideoRef} 
                src={videoUrl} 
                loop autoPlay muted
+               onPlay={() => audioRef.current?.play()}
+               onPause={() => audioRef.current?.pause()}
                onTimeUpdate={() => {
                   if (previewVideoRef.current && previewVideoRef.current.currentTime > trimRange.end) {
                     previewVideoRef.current.currentTime = trimRange.start;
@@ -327,35 +353,50 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
                }}
                style={{ width: "100%", borderRadius: 16 }} 
              />
-             <div style={{ position: "absolute", top: textPos.y + "%", left: textPos.x + "%", color: "white", fontWeight: 900, fontSize: 24, textShadow: "0 2px 10px rgba(0,0,0,0.5)", pointerEvents: "none" }}>{overlayText}</div>
+             <div 
+               style={{ 
+                 position: "absolute", top: textPos.y + "%", left: textPos.x + "%", transform: "translate(-50%, -50%)",
+                 color: "white", fontWeight: 900, fontSize: 32, textShadow: "0 2px 10px rgba(0,0,0,0.8)", 
+                 pointerEvents: "none", whiteSpace: "nowrap", opacity: overlayText ? 1 : 0
+               }}>
+                 {overlayText}
+             </div>
+             {isDragging && <div style={{ position: "absolute", top: 10, right: 10, background: colors.primary, color: "white", padding: "4px 10px", borderRadius: 8, fontSize: 10, fontWeight: 900 }}>MUDANDO POSIÇÃO...</div>}
           </div>
 
           <div style={{ padding: "16px 8px" }}>
-             <div style={{ display: "flex", justifyContent: "space-between", color: "white", fontSize: 11, fontWeight: 800, marginBottom: 8 }}>
-                <span>Corte: {trimRange.start}s - {trimRange.end}s</span>
-                <span onClick={() => setVideoUrl(null)} style={{ color: "#ef4444" }}>Remover</span>
+             <div style={{ display: "flex", justifyContent: "space-between", color: "white", fontSize: 11, fontWeight: 800, marginBottom: 8, opacity: 0.7 }}>
+                <span>⏱️ CORTE (TRIM)</span>
+                <span onClick={() => { setVideoUrl(null); setBgMusic(null); }} style={{ color: "#ef4444", cursor: "pointer" }}>Remover Vídeo</span>
              </div>
-             <div style={{ display: "flex", gap: 8 }}>
-                <input type="range" min="0" max="15" value={trimRange.start} onChange={(e) => setTrimRange(prev => ({ ...prev, start: Number(e.target.value) }))} style={{ flex: 1, accentColor: colors.primaryLight }} />
-                <input type="range" min="0" max="15" value={trimRange.end} onChange={(e) => setTrimRange(prev => ({ ...prev, end: Number(e.target.value) }))} style={{ flex: 1, accentColor: colors.primaryLight }} />
+             <div style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(255,255,255,0.05)", padding: 12, borderRadius: 12 }}>
+                <input type="range" min="0" max="15" value={trimRange.start} onChange={(e) => setTrimRange(prev => ({ ...prev, start: Math.min(Number(e.target.value), trimRange.end - 1) }))} style={{ flex: 1, accentColor: colors.primaryLight }} />
+                <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.2)" }}></div>
+                <input type="range" min="0" max="15" value={trimRange.end} onChange={(e) => setTrimRange(prev => ({ ...prev, end: Math.max(Number(e.target.value), trimRange.start + 1) }))} style={{ flex: 1, accentColor: colors.primaryLight }} />
              </div>
 
-             <input 
-               placeholder="Texto no vídeo..." 
-               value={overlayText} 
-               onChange={(e) => setOverlayText(e.target.value)} 
-               style={{ width: "100%", marginTop: 16, background: "rgba(255,255,255,0.1)", border: 0, padding: 12, borderRadius: 12, color: "white", fontSize: 13 }} 
-             />
+             <div style={{ marginTop: 20, display: "flex", gap: 10, alignItems: "center" }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.1)", display: "grid", placeItems: "center", color: "white" }}>Aa</div>
+                <input 
+                  placeholder="Escreva algo sobre o vídeo..." 
+                  value={overlayText} 
+                  onChange={(e) => setOverlayText(e.target.value)} 
+                  style={{ flex: 1, background: "rgba(255,255,255,0.05)", border: 0, padding: "12px 16px", borderRadius: 12, color: "white", fontSize: 13, outline: "none" }} 
+                />
+             </div>
 
-             <div style={{ marginTop: 16, display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
-                {["Harpa", "Adoração", "Praise", "Instrumental"].map(track => (
-                  <button key={track} onClick={() => setBgMusic(track === bgMusic ? null : track)} style={{ padding: "6px 16px", borderRadius: 100, border: 0, background: bgMusic === track ? colors.primaryLight : "rgba(255,255,255,0.1)", color: "white", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>
-                    🎵 {track}
-                  </button>
-                ))}
+             <div style={{ marginTop: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "white", marginBottom: 8, opacity: 0.7 }}>🎵 TRILHA SONORA (SINCRONIZADA)</div>
+                <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
+                   {["Harpa Cristã", "Louvor & Adoração", "Praise instrumental", "Som do Céu"].map(track => (
+                     <button key={track} onClick={() => setBgMusic(track === bgMusic ? null : track)} style={{ padding: "8px 20px", borderRadius: 100, border: 0, background: bgMusic === track ? colors.primaryLight : "rgba(255,255,255,0.1)", color: "white", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", transition: "0.2s" }}>
+                       {track === bgMusic ? "✅ " : "🎵 "} {track}
+                     </button>
+                   ))}
+                </div>
              </div>
           </div>
-          {bgMusic && <audio ref={audioRef} autoPlay loop style={{ display: "none" }} />}
+          {bgMusic && <audio ref={audioRef} autoPlay loop src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" style={{ display: "none" }} />}
         </div>
       )}
 
