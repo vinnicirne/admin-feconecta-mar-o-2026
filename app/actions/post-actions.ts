@@ -1,17 +1,15 @@
 "use server";
 
-import { supabaseServer } from "@/lib/supabase-server";
+import { createSupabaseServer } from "@/lib/supabase-server";
 
 // 🛡️ AÇÃO MINISTERIAL PROTEGIDA (SERVER SIDE ONLY)
-// Estas funções rodam exclusivamente no servidor da Vercel.
-// Nenhuma URL ou Chave do Supabase escapa para o navegador aqui.
-
 export async function createPostAction(postData: any) {
   try {
-    const { data: { user } } = await supabaseServer.auth.getUser();
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Usuário não autenticado no Refúgio.");
 
-    const { data, error } = await supabaseServer
+    const { data, error } = await supabase
       .from('posts')
       .insert([{ ...postData, profile_id: user.id }])
       .select();
@@ -26,9 +24,10 @@ export async function createPostAction(postData: any) {
 
 export async function getPostsAction() {
   try {
-    const { data, error } = await supabaseServer
+    const supabase = await createSupabaseServer();
+    const { data, error } = await supabase
       .from('posts')
-      .select('*, profiles!profile_id(full_name, username)')
+      .select('*, profiles!profile_id(full_name, username), like_count:post_likes(count), comment_count:comments(count), prayer_count:post_prayers(count)')
       .order('created_at', { ascending: false });
 
     if (error) throw error;

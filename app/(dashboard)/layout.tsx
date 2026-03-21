@@ -3,8 +3,8 @@ import { SidebarProvider } from "@/components/layout/sidebar-context";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getMockSession } from "@/lib/auth/session";
 import { LayoutShell } from "@/components/layout/layout-shell";
+import { redirect } from "next/navigation";
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   let authUser = null;
@@ -16,13 +16,19 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     console.warn("Supabase Auth failure at layout (ignoring for build/preview):", error);
   }
   
-  const user = authUser ? { 
-    id: authUser.id, 
-    name: authUser.email?.split('@')[0] || "Admin", 
-    email: authUser.email!, 
-    role: "super_admin" as const, 
+  // 🛡️ PROTEÇÃO DE ROTA: Apenas Administradores entram aqui
+  const isAdmin = authUser?.app_metadata?.role === 'admin' || authUser?.user_metadata?.role === 'admin';
+  if (!isAdmin) {
+    redirect("/"); // Membros comuns são expulsos do Dashboard para o Feed
+  }
+
+  const user = { 
+    id: authUser!.id, 
+    name: authUser!.user_metadata?.full_name || authUser!.email?.split('@')[0] || "Admin", 
+    email: authUser!.email!, 
+    role: (authUser!.user_metadata?.role || "admin") as any, 
     mfaEnabled: true 
-  } : await getMockSession();
+  };
 
   return (
     <SidebarProvider>

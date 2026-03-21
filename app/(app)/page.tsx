@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Heart, 
   MessageSquare, 
@@ -8,30 +8,21 @@ import {
   Maximize2, 
   User, 
   Sparkles, 
-  Search, 
-  Bell, 
-  Home, 
-  PlusCircle,
-  MoreHorizontal,
-  Edit3,
-  Trash2,
-  Copy,
-  Repeat,
-  Play,
-  Volume2
+  Volume2,
+  X
 } from "lucide-react";
 import { PostCreator } from "@/components/app/feed/post-creator";
 import { getPostsAction } from "@/app/actions/post-actions";
 import { LoginForm } from "@/components/auth/login-form";
 import { SignUpForm } from "@/components/auth/signup-form";
-import { supabase } from "@/lib/supabase";
-import { X } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { likePostAction, prayPostAction, commentPostAction } from "@/app/actions/interaction-actions";
 
 export default function FeedPage() {
+  const supabase = useMemo(() => createClient(), []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup" | null>(null);
   const [user, setUser] = useState<any>(null);
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +30,6 @@ export default function FeedPage() {
     fetchPosts();
     checkUser();
 
-    // Listener para fechar modal no login
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         setUser(session.user);
@@ -50,7 +40,7 @@ export default function FeedPage() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabase]);
 
   const checkUser = async () => {
     const { data } = await supabase.auth.getUser();
@@ -61,21 +51,20 @@ export default function FeedPage() {
     try {
       setLoading(true);
       const res = await getPostsAction();
-
       if (res.success) {
         setPosts(res.data || []);
       } else {
         throw new Error(res.error);
       }
     } catch (err) {
-      console.error("ERRO PROTEGIDO AO BUSCAR FEED:", err);
+      console.error("ERRO AO BUSCAR FEED:", err);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px 120px" }}>
+    <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px 120px" }} suppressHydrationWarning>
       
       {/* 🔴 MENSAGEM DO DIA */}
       <section className="message-day-card" onClick={() => setIsModalOpen(true)} style={{ marginBottom: 24, padding: 32, borderRadius: 32, background: "linear-gradient(135deg, var(--primary) 0%, #0d9488 100%)", color: "white", cursor: "pointer", position: "relative", overflow: "hidden", boxShadow: "0 20px 40px rgba(15, 118, 110, 0.25)" }}>
@@ -107,7 +96,7 @@ export default function FeedPage() {
         )}
       </div>
 
-      {/* 🔴 MODAIS DE AUTH (PREMIUM GLASS) */}
+      {/* 🔴 MODAIS DE AUTH */}
       {authMode && (
         <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
            <div style={{ background: "white", width: "100%", maxWidth: 420, borderRadius: 32, padding: 32, position: "relative", boxShadow: "0 25px 50px rgba(0,0,0,0.15)" }}>
@@ -137,13 +126,7 @@ export default function FeedPage() {
         </div>
       )}
 
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .desktop-only-creator { display: none !important; }
-        }
-      `}</style>
-
-      {/* 🔴 FEED REAL COM MÍDIAS */}
+      {/* 🔴 FEED REAL */}
       <div style={{ display: "flex", flexDirection: "column", gap: 24, marginTop: 32 }}>
         {loading ? (
            <div style={{ textAlign: "center", padding: 40 }}><LoaderPlaceholder /></div>
@@ -153,8 +136,6 @@ export default function FeedPage() {
            </div>
         ) : posts.map((post) => (
           <div key={post.id} className="card" style={{ padding: "0", borderRadius: 32, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.02)" }}>
-            
-            {/* Header com Padding */}
             <div style={{ padding: "20px 24px", display: "flex", gap: 14, alignItems: "center" }}>
               <div style={{ width: 44, height: 44, borderRadius: 14, background: "var(--line)", display: "grid", placeItems: "center" }}><User size={20} className="muted" /></div>
               <div style={{ flex: 1 }}>
@@ -166,19 +147,22 @@ export default function FeedPage() {
               </div>
             </div>
             
-            {/* Renderização Inteligente por Tipo de Post */}
-            <PostContent post={post} />
-
-            {/* Footer de Interações Baseado no Tipo */}
-            <PostInteractions post={post} />
+            <PostContent post={post} onRefresh={fetchPosts} />
+            <PostInteractions post={post} onRefresh={fetchPosts} />
           </div>
         ))}
       </div>
+
+      <style jsx>{`
+        @media (max-width: 768px) {
+          .desktop-only-creator { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
 
-function PostContent({ post }: { post: any }) {
+function PostContent({ post, onRefresh }: { post: any, onRefresh: () => void }) {
   const isEdificar = post.post_type === "edificar";
   const isOracao = post.post_type === "oracao";
 
@@ -208,7 +192,7 @@ function PostContent({ post }: { post: any }) {
       </p>
 
       {post.image_url && post.media_type === 'image' && (
-        <img src={post.image_url} style={{ width: "100%", borderRadius: 20, marginTop: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }} />
+        <img src={post.image_url} alt="" style={{ width: "100%", borderRadius: 20, marginTop: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }} />
       )}
 
       {post.image_url && post.media_type === 'video' && (
@@ -223,11 +207,18 @@ function PostContent({ post }: { post: any }) {
       )}
 
       {isOracao && (
-        <button style={{ 
-          marginTop: 24, background: "linear-gradient(135deg, #10b981, #065f46)", border: 0, 
-          borderRadius: 100, padding: "12px 32px", color: "white", fontWeight: 900, fontSize: 14,
-          boxShadow: "0 10px 20px rgba(6, 95, 70, 0.2)"
-        }}>
+        <button 
+          onClick={async () => {
+             const res = await prayPostAction(post.id);
+             if (res.success) onRefresh();
+             else alert(res.error);
+          }}
+          style={{ 
+            marginTop: 24, background: "linear-gradient(135deg, #10b981, #065f46)", border: 0, 
+            borderRadius: 100, padding: "12px 32px", color: "white", fontWeight: 900, fontSize: 14,
+            boxShadow: "0 10px 20px rgba(6, 95, 70, 0.2)", cursor: "pointer"
+          }}
+        >
           🙏 ORAR POR MIM
         </button>
       )}
@@ -235,27 +226,87 @@ function PostContent({ post }: { post: any }) {
   );
 }
 
-function PostInteractions({ post }: { post: any }) {
-  const isOracao = post.post_type === "oracao";
+function PostInteractions({ post, onRefresh }: { post: any, onRefresh: () => void }) {
+  const [showCommentInput, setShowCommentInput] = useState(false);
+  const [commentText, setCommentText] = useState("");
   
+  const handleLike = async () => {
+     const res = await likePostAction(post.id);
+     if (res.success) onRefresh();
+     else alert(res.error);
+  };
+
+  const handlePray = async () => {
+     const res = await prayPostAction(post.id);
+     if (res.success) onRefresh();
+     else alert(res.error);
+  };
+
+  const handleComment = async (e: React.FormEvent) => {
+     e.preventDefault();
+     if (!commentText.trim()) return;
+     const res = await commentPostAction(post.id, commentText);
+     if (res.success) {
+       setCommentText("");
+       setShowCommentInput(false);
+       onRefresh();
+     } else {
+       alert(res.error);
+     }
+  };
+
+  const handleShare = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({ 
+          title: 'Refúgio FéConecta', 
+          text: post.content, 
+          url: window.location.href 
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert("Link copiado! 🙏");
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        navigator.clipboard.writeText(window.location.href);
+        alert("Link copiado! 🙏");
+      }
+    }
+  };
+
   return (
-    <div style={{ padding: "16px 24px", display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--line)", background: "white" }}>
-        <div style={{ display: "flex", gap: 20 }}>
-          <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 700, color: "var(--muted)" }}>
-              <Heart size={18} className="danger" /> <span style={{ color: "#ef4444" }}>128</span>
-          </button>
-          <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 700, color: "var(--muted)" }}>
-              <MessageSquare size={18} /> 34
-          </button>
-          {isOracao && (
-            <button style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 800, color: "var(--primary)" }}>
-                🙏 <span style={{ textDecoration: "underline" }}>12 orando</span>
-            </button>
-          )}
+    <div style={{ padding: "16px 24px", borderTop: "1px solid var(--line)", background: "white" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: showCommentInput ? 16 : 0 }}>
+            <div style={{ display: "flex", gap: 20 }}>
+              <button onClick={handleLike} style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 700, color: "var(--muted)", cursor: "pointer" }}>
+                  <Heart size={18} fill={post.like_count[0]?.count > 0 ? "#ef4444" : "none"} color={post.like_count[0]?.count > 0 ? "#ef4444" : "var(--muted)"} /> <span style={{ color: post.like_count[0]?.count > 0 ? "#ef4444" : "inherit" }}>{post.like_count[0]?.count || 0}</span>
+              </button>
+              <button onClick={() => setShowCommentInput(!showCommentInput)} style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 700, color: "var(--muted)", cursor: "pointer" }}>
+                  <MessageSquare size={18} color={showCommentInput ? "var(--primary)" : "currentColor"} /> {post.comment_count[0]?.count || 0}
+              </button>
+              {post.post_type === "oracao" && (
+                <button onClick={handlePray} style={{ background: "none", border: 0, display: "flex", gap: 8, alignItems: "center", fontSize: 13, fontWeight: 800, color: "var(--primary)", cursor: "pointer" }}>
+                    🙏 <span style={{ textDecoration: "underline" }}>{post.prayer_count[0]?.count || 0} orando</span>
+                </button>
+              )}
+            </div>
+            <button onClick={handleShare} style={{ width: 36, height: 36, borderRadius: 10, background: "var(--line)", border: 0, display: "grid", placeItems: "center", cursor: "pointer" }}><Share2 size={16} className="muted" /></button>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button style={{ width: 36, height: 36, borderRadius: 10, background: "var(--line)", border: 0, display: "grid", placeItems: "center" }}><Share2 size={16} className="muted" /></button>
-        </div>
+
+        {showCommentInput && (
+          <form onSubmit={handleComment} style={{ display: "flex", gap: 10, marginTop: 12 }}>
+            <input 
+              type="text" 
+              placeholder="Sua palavra de fé..." 
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              style={{ flex: 1, padding: "10px 16px", borderRadius: 12, border: "1px solid var(--line)", outline: "none", fontSize: 13 }}
+              autoFocus
+            />
+            <button type="submit" style={{ background: "var(--primary)", color: "white", border: 0, padding: "10px 20px", borderRadius: 12, fontSize: 13, fontWeight: 800, cursor: "pointer" }}>Enviar</button>
+          </form>
+        )}
     </div>
   );
 }

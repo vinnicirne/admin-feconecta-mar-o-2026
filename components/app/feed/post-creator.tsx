@@ -202,7 +202,7 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
 
   const handlePublish = async () => {
     if (!text.trim() && !media && !audioUrl && !videoUrl) {
-      alert("Escreva algo ou adicione uma mídia 🙏");
+      alert("Escreva algo ou adicione uma mídia para edificar a comunidade 🙏");
       return;
     }
     setIsPublishing(true);
@@ -248,7 +248,7 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
 
       const res = await createPostAction({
         content: text,
-        post_type: postType,
+        post_type: postType || 'compartilhar',
         media_type: finalMediaType,
         image_url: finalFileUrl,
         background_style: postType === "compartilhar" ? "transparent" : greenGradient,
@@ -524,8 +524,8 @@ export function PostCreator({ forceExpanded, initialCitation }: { forceExpanded?
            )}
 
            <div style={{ display: "flex", justifyContent: "flex-end", width: "100%", gap: 12, marginTop: 12, fontSize: 12, opacity: 0.8 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}><Heart size={14} fill="#ef4444" color="#ef4444" /> 128</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}><MessageCircle size={14} /> 34</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}><Heart size={14} fill="#ef4444" color="#ef4444" /> 0</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}><MessageCircle size={14} /> 0</div>
            </div>
         </div>
       </div>

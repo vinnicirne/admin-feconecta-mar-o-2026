@@ -18,9 +18,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { PostCreator } from "@/components/app/feed/post-creator";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const supabase = createClient();
   const pathname = usePathname();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -123,7 +124,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <button style={{ width: 38, height: 38, borderRadius: 12, border: 0, background: "var(--line)", display: "grid", placeItems: "center" }}><Search size={19} className="muted" /></button>
             
             {user ? (
-               <Link href="/profile/me" style={{ width: 38, height: 38, borderRadius: 12, background: "var(--primary-soft)", display: "grid", placeItems: "center", overflow: "hidden" }}>
+               <Link 
+                 href={`/profile/${user.user_metadata.username || (user.email ? user.email.split('@')[0] : 'me')}`} 
+                 style={{ width: 38, height: 38, borderRadius: 12, background: "var(--primary-soft)", display: "grid", placeItems: "center", overflow: "hidden" }}
+               >
                    <UserIcon size={20} className="primary" />
                </Link>
             ) : (
