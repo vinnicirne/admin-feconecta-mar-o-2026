@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { LucideIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
+import React from "react";
 
 interface MenuItemProps {
   icon: LucideIcon;
@@ -13,6 +14,7 @@ interface MenuItemProps {
   className?: string;
   isMobile?: boolean;
   iconColor?: string;
+  style?: React.CSSProperties;
 }
 
 export function MenuItem({ 
@@ -23,7 +25,8 @@ export function MenuItem({
   variant = "ghost",
   className = "",
   isMobile = false,
-  iconColor
+  iconColor,
+  style = {}
 }: MenuItemProps) {
   const pathname = usePathname();
   const isActive = href ? (pathname === href || (href === "/" && pathname === "/")) : false;
@@ -48,7 +51,8 @@ export function MenuItem({
         transition: "var(--transition)",
         border: "none",
         width: isMobile ? "auto" : "100%",
-        textAlign: "left"
+        textAlign: "left",
+        ...style
       }}
     >
       <Icon size={isMobile ? 22 : 20} strokeWidth={isActive ? 2.5 : 2} style={{ color: iconColor }} />

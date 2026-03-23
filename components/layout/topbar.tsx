@@ -34,7 +34,7 @@ export function Topbar({ user, menuItems }: TopbarProps) {
               label={item.label}
               href={item.href}
               className="top-nav-item"
-              style={{ width: "auto", padding: "8px 16px" } as any}
+              style={{ width: "auto", padding: "8px 16px" }}
             />
           ))}
        </div>
