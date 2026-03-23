@@ -37,3 +37,4 @@ VALUES
     ('communities', 'Comunidades', true),
     ('post', 'CriaÃ§Ã£o de Posts', true)
 ON CONFLICT (name) DO NOTHING;
+INSERT INTO public.app_features (name, label, is_enabled) VALUES ('testimonies', 'Módulo de Testemunhos', true), ('prayer_answers', 'Respostas de Oração', true) ON CONFLICT (name) DO NOTHING;

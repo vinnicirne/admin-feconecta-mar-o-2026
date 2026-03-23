@@ -20,7 +20,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { createPostAction } from "@/app/actions/post-actions";
 
-type PostType = "compartilhar" | "edificar" | "oracao";
+type PostType = "testemunho" | "vitoria" | "oracao" | "edificar";
 
 const colors = {
   primary: "#059669",
@@ -30,9 +30,9 @@ const colors = {
   text: "#064e3b",
 };
 
-export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { forceExpanded?: boolean; initialCitation?: string, onSuccess?: () => void }) {
+export function PostCreator({ forceExpanded, initialCitation, communityId, onSuccess }: { forceExpanded?: boolean; initialCitation?: string, communityId?: string, onSuccess?: () => void }) {
   const [isExpanded, setIsExpanded] = useState(forceExpanded || !!initialCitation || false);
-  const [postType, setPostType] = useState<PostType>("compartilhar");
+  const [postType, setPostType] = useState<PostType>("testemunho");
   const [text, setText] = useState(initialCitation ?? "");
   const [isPublishing, setIsPublishing] = useState(false);
   const router = useRouter();
@@ -208,6 +208,10 @@ export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { for
 
   const greenGradient = postType === "edificar" 
     ? "linear-gradient(135deg, #059669 0%, #064e3b 100%)" 
+    : postType === "testemunho"
+    ? "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)"
+    : postType === "vitoria"
+    ? "linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)"
     : "radial-gradient(circle at top right, rgba(255,255,255,0.15), transparent), radial-gradient(circle at bottom left, #064e3b, #022c22)";
 
   const uploadToStorage = async (url: string, extension: string, contentType: string) => {
@@ -293,9 +297,10 @@ export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { for
       const res = await createPostAction({
         content: text,
         post_type: postType || 'compartilhar',
+        community_id: communityId,
         media_type: finalMediaType,
         image_url: finalFileUrl,
-        background_style: postType === "compartilhar" ? "transparent" : greenGradient,
+        background_style: postType === "edificar" || postType === "testemunho" || postType === "vitoria" ? greenGradient : "transparent",
         is_bold: styles.bold,
         is_italic: styles.italic,
         status: 'published',
@@ -368,10 +373,11 @@ export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { for
       </div>
 
       {/* TYPE SELECTOR */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        <TypeBtn label="🙏 Compartilhar" active={postType === "compartilhar"} onClick={() => setPostType("compartilhar")} />
-        <TypeBtn label="📖 Edificar" active={postType === "edificar"} onClick={() => setPostType("edificar")} />
-        <TypeBtn label="🤝 Oração" active={postType === "oracao"} onClick={() => setPostType("oracao")} />
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, overflowX: "auto", paddingBottom: 8 }} className="hide-scroll">
+        <TypeBtn label="🌟 Testemunho" active={postType === "testemunho"} onClick={() => setPostType("testemunho")} color="#f59e0b" />
+        <TypeBtn label="🔥 Vitória" active={postType === "vitoria"} onClick={() => setPostType("vitoria")} color="#3b82f6" />
+        <TypeBtn label="🤝 Oração" active={postType === "oracao"} onClick={() => setPostType("oracao")} color="#10b981" />
+        <TypeBtn label="📖 Edificar" active={postType === "edificar"} onClick={() => setPostType("edificar")} color="#059669" />
       </div>
 
       {/* INPUT */}
@@ -536,22 +542,23 @@ export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { for
         <span style={{ fontSize: 11, fontWeight: 900, color: colors.text, textTransform: "uppercase", letterSpacing: 1 }}>Preview Ministerial</span>
         <div style={{ 
           marginTop: 10, padding: 32, borderRadius: 24, 
-          background: postType === "compartilhar" ? "white" : greenGradient, 
-          color: postType === "compartilhar" ? colors.text : "white", 
-          textAlign: postType === "compartilhar" ? "left" : "center", 
+          background: postType === "edificar" || postType === "testemunho" || postType === "vitoria" ? greenGradient : "white", 
+          color: postType === "edificar" || postType === "testemunho" || postType === "vitoria" ? "white" : colors.text, 
+          textAlign: postType === "edificar" || postType === "testemunho" || postType === "vitoria" ? "center" : "left", 
           boxShadow: "0 20px 50px rgba(0,0,0,0.15)",
-          border: postType === "compartilhar" ? "1px solid #d1fae5" : "0",
-          display: "flex", flexDirection: "column", alignItems: postType === "compartilhar" ? "flex-start" : "center", gap: 12
+          border: postType === "edificar" || postType === "testemunho" || postType === "vitoria" ? "0" : "1px solid #d1fae5",
+          display: "flex", flexDirection: "column", alignItems: postType === "edificar" || postType === "testemunho" || postType === "vitoria" ? "center" : "flex-start", gap: 12
         }}>
            <h2 style={{ fontSize: 20, fontWeight: 900, fontStyle: "italic", margin: 0 }}>
-             {postType === "oracao" ? "Preciso de oração agora..." : postType === "edificar" ? "Uma palavra para você..." : "Testemunho de Fé"}
+             {postType === "oracao" ? "Preciso de intercessão..." : postType === "vitoria" ? "Oração Respondida! 🙌" : postType === "testemunho" ? "Glória a Deus! 🌟" : "Palavra de Edificação"}
            </h2>
            
            {media && <img src={media.url} style={{ width: "100%", borderRadius: 16, marginTop: 8 }} />}
            {videoUrl && <div style={{ background: "rgba(255,255,255,0.1)", padding: 12, borderRadius: 16, width: "100%", display: "flex", alignItems: "center", gap: 10 }}>🎬 Vídeo Reels Anexado</div>}
            {audioUrl && <div style={{ background: "rgba(255,255,255,0.1)", padding: 8, borderRadius: 12, width: "100%" }}>🎧 Áudio Anexado</div>}
-
-           <div style={{ height: 1, background: postType === "compartilhar" ? colors.primaryLight : "rgba(255,255,255,0.2)", width: 80 }}></div>
+           
+           <div style={{ height: 1, background: postType === "edificar" || postType === "testemunho" || postType === "vitoria" ? "rgba(255,255,255,0.2)" : colors.primaryLight, width: 80 }}></div>
+           
            <p style={{ 
               fontSize: 15, lineHeight: 1.5, opacity: 0.9, margin: 0,
               fontWeight: styles.bold ? "900" : "500",
@@ -587,7 +594,7 @@ export function PostCreator({ forceExpanded, initialCitation, onSuccess }: { for
   );
 }
 
-function TypeBtn({ label, active, onClick }: any) {
+function TypeBtn({ label, active, onClick, color }: any) {
   return (
     <button
       onClick={onClick}
@@ -597,11 +604,12 @@ function TypeBtn({ label, active, onClick }: any) {
         borderRadius: 12,
         fontWeight: 800,
         fontSize: 10,
-        border: active ? 0 : "1px solid #d1fae5",
-        background: active ? "linear-gradient(135deg, #10b981, #065f46)" : "white",
-        color: active ? "white" : "#064e3b",
+        border: active ? 0 : "1px solid #e2e8f0",
+        background: active ? color : "white",
+        color: active ? "white" : "#64748b",
         whiteSpace: "nowrap",
-        transition: "0.2s"
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        transform: active ? "scale(1.05)" : "scale(1)"
       }}
     >
       {label}

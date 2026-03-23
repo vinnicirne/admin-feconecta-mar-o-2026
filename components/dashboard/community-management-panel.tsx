@@ -141,12 +141,12 @@ export function CommunityManagementPanel({ communities }: CommunityManagementPan
           </div>
 
           <div className="grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))", marginTop: 20 }}>
-            <button className="button secondary" type="button">Ver membros</button>
-            <button className="button secondary" type="button">Ver posts internos</button>
-            <button className="button secondary" type="button">Dar selo azul</button>
-            <button className="button secondary" type="button">Destacar</button>
+            <button className="button secondary" type="button" onClick={() => alert("Exibindo lista de membros da comunidade...")}>Ver membros</button>
+            <button className="button secondary" type="button" onClick={() => alert("Abrindo painel do Mural (Posts)...")}>Mural da Comunidade</button>
+            <button className="button secondary" type="button" onClick={() => alert("Gestão de grupos/ministérios aberta!")}>Gerir Ministérios</button>
+            <button className="button secondary" type="button" onClick={() => alert("Derrubando conexões de sala de guerra...")}>Encerrar Salas Ativas</button>
             <button className="button secondary" type="button">Editar infos</button>
-            <button className="button" type="button" style={{ background: "var(--danger)" }}>
+            <button className="button" type="button" style={{ background: "var(--danger)", color: "white", fontWeight: 700 }}>
               Suspender comunidade
             </button>
           </div>

@@ -1,173 +1,70 @@
 "use client";
 
-import { 
-  BarChart3, 
-  Search, 
-  Bell, 
-  User, 
-  Command,
-  Monitor,
-  ArrowUpRight,
-  Sparkles,
-  RefreshCcw,
-  ExternalLink,
-  Pocket,
-  Menu
-} from "lucide-react";
-import { useSidebar } from "./sidebar-context";
-import Link from 'next/link';
+import Link from "next/link";
+import { Sparkles, Search, LayoutDashboard, User as UserIcon } from "lucide-react";
+import { MenuItem } from "@/components/ui/menu-item";
 
-export function Topbar({ user }: { user?: any }) {
-  const { toggleMobileMenu } = useSidebar();
+interface TopbarProps {
+  user: any;
+  menuItems: any[];
+}
 
+export function Topbar({ user, menuItems }: TopbarProps) {
   return (
-    <header 
-      className="card topbar" 
-      style={{ 
-        height: 72,
-        margin: "20px 20px 0 20px",
-        padding: "0 16px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        background: "rgba(255, 255, 255, 0.8)",
-        backdropFilter: "blur(12px)",
-        border: "1px solid var(--line)",
-        borderRadius: 20,
-        position: "sticky",
-        top: 20,
-        zIndex: 90
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        {/* 🔴 MENU HAMBURGUER MOBILE (ALTAMENTE VISÍVEL) */}
-        <button 
-          className="mobile-menu-btn"
-          onClick={toggleMobileMenu}
-          style={{ 
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            background: "var(--line)", 
-            border: "1px solid rgba(0,0,0,0.05)", 
-            cursor: "pointer", 
-            color: "var(--primary)",
-            display: "grid",
-            placeItems: "center"
-          }}
-        >
-          <Menu size={22} style={{ strokeWidth: 3 }} />
-        </button>
+    <nav className="web-nav" style={{ 
+      position: "fixed", top: 0, width: "100%", height: 72, background: "white", 
+      borderBottom: "1px solid var(--line)", zIndex: 1100,
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "0 24px"
+    }}>
+       <div style={{ padding: "0 24px", display: "flex", alignItems: "center", gap: 12 }}>
+          <Link href="/" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 8 }}>
+             <div style={{ width: 32, height: 32, borderRadius: 10, background: "var(--primary)", display: "grid", placeItems: "center", color: "white" }}>
+                <Sparkles size={18} />
+             </div>
+             <span style={{ fontWeight: 900, fontSize: 18, letterSpacing: "-0.5px" }}>FéConecta</span>
+          </Link>
+       </div>
 
-        {/* 🔴 BUSCA GLOBAL INTEGRADA (RESPONSIVA) */}
-        <div className="search-container" style={{ position: "relative", width: 400 }}>
-          <Search 
-            size={18} 
-            style={{ 
-              position: "absolute", 
-              left: 14, 
-              top: "50%", 
-              transform: "translateY(-50%)", 
-              opacity: 0.4 
-            }} 
-          />
-          <input 
-            type="text" 
-            placeholder="Busca..." 
-            className="input"
-            style={{ 
-              width: "100%",
-              background: "var(--line)",
-              border: "1px solid rgba(0,0,0,0.02)",
-              paddingLeft: 44,
-              height: 44,
-              borderRadius: 14,
-              fontSize: 14
-            }}
-          />
-        </div>
-      </div>
+       <div style={{ display: "flex", gap: 4, padding: "0 20px" }}>
+          {menuItems.filter(i => !i.isFloating).map((item) => (
+            <MenuItem 
+              key={item.id}
+              icon={item.icon}
+              label={item.label}
+              href={item.href}
+              className="top-nav-item"
+              style={{ width: "auto", padding: "8px 16px" } as any}
+            />
+          ))}
+       </div>
 
-      {/* 🔴 AÇÕES RÁPIDAS (VER APP / NOTIFICAÇÕES) */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        
-        {/* BOTÃO ESTRATÉGICO: IR PARA O APP */}
-        <Link href="/feed" className="desktop-view-btn">
-          <button className="button" style={{ 
-            height: 44, 
-            padding: "0 20px", 
-            borderRadius: 14, 
-            fontSize: 13, 
-            fontWeight: 800,
-            display: "flex", 
-            alignItems: "center", 
-            gap: 10,
-            background: "rgba(15,118,110,0.1)",
-            color: "var(--primary)",
-            border: "1px solid rgba(15,118,110,0.1)"
-          }}>
-             <ExternalLink size={16} /> Ver App
-          </button>
-        </Link>
+       <div style={{ display: "flex", gap: 16, alignItems: "center", justifyContent: "flex-end", padding: "0 24px" }}>
+          <div style={{ position: "relative" }}>
+             <Search size={16} className="muted" style={{ position: "absolute", left: 12, top: 10 }} />
+             <input placeholder="Busca rápida..." className="input" style={{ width: 140, padding: "8px 16px 8px 36px", fontSize: 13, background: "var(--line)", border: 0 }} />
+          </div>
 
-        {/* Notificações / Monitoramento */}
-        <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ 
-            width: 44, 
-            height: 44, 
-            borderRadius: 14, 
-            background: "white", 
-            border: "1px solid var(--line)", 
-            display: "grid", 
-            placeItems: "center", 
-            position: "relative" 
-          }}>
-            <Bell size={20} className="muted" />
-          </button>
-          
-          <button className="desktop-view-btn" style={{ 
-            width: 44, 
-            height: 44, 
-            borderRadius: 14, 
-            background: "white", 
-            border: "1px solid var(--line)", 
-            display: "grid", 
-            placeItems: "center" 
-          }}>
-            <RefreshCcw size={20} className="muted" />
-          </button>
-        </div>
-
-        {/* Perfil Rápido Admin */}
-        <div style={{ 
-          padding: "4px 8px", 
-          background: "var(--line)", 
-          borderRadius: 12, 
-          display: "flex", 
-          alignItems: "center", 
-          gap: 10,
-          cursor: "pointer"
-        }}>
-           <div style={{ width: 32, height: 32, borderRadius: 10, background: "var(--primary)", color: "white", display: "grid", placeItems: "center" }}>
-              <User size={18} />
-           </div>
-           <span className="profile-name" style={{ fontSize: 13, fontWeight: 700 }}>Marcos S.</span>
-        </div>
-      </div>
-
-      <style jsx>{`
-        .mobile-menu-btn { display: block !important; }
-        .search-container { width: 140px !important; }
-        .profile-name { display: none !important; }
-        .desktop-view-btn { display: none !important; }
-
-        @media (min-width: 1024px) {
-          .mobile-menu-btn { display: none !important; }
-          .search-container { width: 400px !important; }
-          .profile-name { display: block !important; }
-          .desktop-view-btn { display: flex !important; }
-        }
-      `}</style>
-    </header>
+          {user ? (
+            <>
+              <Link href="/dashboard" style={{ padding: "10px 16px", borderRadius: 12, border: "1px solid var(--line)", textDecoration: "none", fontSize: 13, fontWeight: 700, color: "black", display: "flex", alignItems: "center", gap: 8 }}>
+                 <LayoutDashboard size={16} /> Painel ADM
+              </Link>
+              <Link href="/profile/me" style={{ width: 40, height: 40, borderRadius: 12, background: "var(--primary-soft)", display: "grid", placeItems: "center", overflow: "hidden" }}>
+                  <UserIcon size={20} className="primary" />
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/login" style={{ padding: "10px 20px", borderRadius: 12, textDecoration: "none", fontSize: 14, fontWeight: 800, color: "var(--primary)" }}>
+                 Entrar
+              </Link>
+              <Link href="/signup" style={{ padding: "10px 24px", borderRadius: 12, background: "var(--primary)", color: "white", textDecoration: "none", fontSize: 14, fontWeight: 800, boxShadow: "var(--shadow-md)" }}>
+                 Criar Conta
+              </Link>
+            </>
+          )}
+       </div>
+    </nav>
   );
 }

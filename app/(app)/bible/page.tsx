@@ -210,6 +210,8 @@ export default function BiblePage() {
   const [previewComments, setPreviewComments] = useState<any[]>([]);
   const [showingThreadFor, setShowingThreadFor] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [editingComment, setEditingComment] = useState<{ id: string, content: string } | null>(null);
+  const [isDeletingComment, setIsDeletingComment] = useState<string | null>(null);
   const HIGHLIGHT_COLORS = [
     { hex: "#fef08a", name: "Amarelo"  },
     { hex: "#86efac", name: "Verde"    },
@@ -646,9 +648,59 @@ export default function BiblePage() {
       
       setReplyText("");
       // Atualização local imediata da thread
-      if (data) setPreviewComments(prev => [...prev, data[0]]);
+      if (data) {
+        setPreviewComments(prev => [...prev, data[0]]);
+        setCommentsData(prev => [...prev, data[0]]);
+      }
       fetchVerseNotes();
     } catch (err) { console.error("ERRO AO RESPONDER:", err); }
+  };
+
+  const updateBibleComment = async () => {
+    if (!editingComment || !editingComment.content.trim()) return;
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("bible_comments")
+        .update({ content: editingComment.content })
+        .eq("id", editingComment.id)
+        .eq("profile_id", user.id);
+
+      if (error) throw error;
+
+      setPreviewComments(prev => prev.map(c => c.id === editingComment.id ? { ...c, content: editingComment.content } : c));
+      setCommentsData(prev => prev.map(c => c.id === editingComment.id ? { ...c, content: editingComment.content } : c));
+      setEditingComment(null);
+    } catch (err) { console.error("ERRO AO EDITAR COMENTARIO:", err); }
+  };
+
+  const deleteBibleComment = async (id: string) => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("bible_comments")
+        .delete()
+        .eq("id", id)
+        .eq("profile_id", user.id);
+
+      if (error) throw error;
+
+      const updatedPreview = previewComments.filter(c => c.id !== id);
+      setPreviewComments(updatedPreview);
+      setCommentsData(prev => prev.filter(c => c.id !== id));
+      
+      if (updatedPreview.length === 0) {
+         setShowingThreadFor(null);
+      }
+      fetchVerseNotes();
+    } catch (err) { console.error("ERRO AO EXCLUIR COMENTARIO:", err); }
+    finally { setIsDeletingComment(null); }
   };
 
   // ── Filtros ─────────────────────────────────────────
@@ -1100,11 +1152,30 @@ export default function BiblePage() {
             <div style={{ flex: 1, overflowY: "auto", padding: 20, background: "#f8fafc", display: "flex", flexDirection: "column", gap: 16 }}>
                {previewComments.map((com) => (
                   <div key={com.id} style={{ background: "white", padding: 16, borderRadius: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "center" }}>
                         <span style={{ fontSize: 11, fontWeight: 800, color: "#9333ea" }}>Você (Ministério)</span>
-                        <span style={{ fontSize: 10, color: "var(--muted)" }}>{new Date(com.created_at).toLocaleDateString()}</span>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                           <button onClick={() => setEditingComment({ id: com.id, content: com.content })} style={{ background: "none", border: 0, color: "var(--muted)", cursor: "pointer" }}><Highlighter size={12}/></button>
+                           <button onClick={() => setIsDeletingComment(com.id)} style={{ background: "none", border: 0, color: "#ef4444", cursor: "pointer" }}><X size={12}/></button>
+                           <span style={{ fontSize: 10, color: "var(--muted)" }}>{new Date(com.created_at).toLocaleDateString()}</span>
+                        </div>
                      </div>
-                     <p style={{ margin: 0, fontSize: 14, color: "#1e293b", lineHeight: 1.5 }}>{com.content}</p>
+                     {editingComment?.id === com.id ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                           <textarea 
+                             autoFocus
+                             value={editingComment.content} 
+                             onChange={(e) => setEditingComment({ ...editingComment, content: e.target.value })}
+                             style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid var(--primary)", fontSize: 14, outline: "none", resize: "none" }}
+                           />
+                           <div style={{ display: "flex", gap: 8 }}>
+                              <Button variant="primary" size="sm" onClick={updateBibleComment} style={{ flex: 1 }}>Salvar</Button>
+                              <Button variant="ghost" size="sm" onClick={() => setEditingComment(null)} style={{ flex: 1 }}>Cancelar</Button>
+                           </div>
+                        </div>
+                     ) : (
+                        <p style={{ margin: 0, fontSize: 14, color: "#1e293b", lineHeight: 1.5 }}>{com.content}</p>
+                     )}
                   </div>
                ))}
             </div>
@@ -1123,6 +1194,20 @@ export default function BiblePage() {
                      <ChevronRight size={20} />
                   </button>
                </div>
+            </div>
+         </div>
+      </div>
+    )}
+
+    {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO DE COMENTÁRIO */}
+    {isDeletingComment && (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 4000, display: "grid", placeItems: "center", padding: 20 }}>
+         <div className="card animate-in-up" style={{ width: "100%", maxWidth: 350, padding: 24, borderRadius: 24, textAlign: "center" }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 18, fontWeight: 900 }}>Excluir Comentário?</h3>
+            <p style={{ margin: "0 0 24px", fontSize: 14, color: "var(--muted)", fontWeight: 600 }}>Esta ação não pode ser desfeita. Deseja remover sua reflexão ministerial?</p>
+            <div style={{ display: "flex", gap: 12 }}>
+               <Button variant="ghost" style={{ flex: 1 }} onClick={() => setIsDeletingComment(null)}>Cancelar</Button>
+               <Button variant="danger" style={{ flex: 1 }} onClick={() => deleteBibleComment(isDeletingComment)}>Excluir</Button>
             </div>
          </div>
       </div>

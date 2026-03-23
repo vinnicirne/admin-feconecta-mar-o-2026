@@ -11,35 +11,41 @@ import {
   Sparkles,
   ArrowUpRight,
   Database,
-  Calendar
+  Calendar,
+  Share2
 } from "lucide-react";
+
 import { supabase } from "@/lib/supabase";
 import { FeatureManager } from "@/components/dashboard/feature-manager";
+import { addFeatureAction } from "@/app/actions/temp-feature";
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState({
     totalUsers: 0,
     totalPosts: 0,
     activeToday: 0,
+    totalFollows: 0,
+    totalShares: 0,
+    totalReposts: 0,
     securityIncidents: 0
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchRealtimeMetrics();
+    addFeatureAction();
   }, []);
 
   const fetchRealtimeMetrics = async () => {
     try {
       setLoading(true);
       
-      // 1. Contagem Total de Membros (Crescimento Ministerial)
       const { count: usersCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-      
-      // 2. Contagem Total de Postagens (Engajamento de Fé)
       const { count: postsCount } = await supabase.from('posts').select('*', { count: 'exact', head: true });
+      const { count: followsCount } = await supabase.from('follows').select('*', { count: 'exact', head: true });
+      const { count: sharesCount } = await supabase.from('post_shares').select('*', { count: 'exact', head: true });
+      const { count: repostsCount } = await supabase.from('post_reposts').select('*', { count: 'exact', head: true });
       
-      // 3. Atividade de Hoje (Novas Conexões)
       const today = new Date().toISOString().split('T')[0];
       const { count: todayPosts } = await supabase
         .from('posts')
@@ -50,8 +56,13 @@ export default function DashboardPage() {
         totalUsers: usersCount || 0,
         totalPosts: postsCount || 0,
         activeToday: todayPosts || 0,
-        securityIncidents: 0 // Sem incidentes no refúgio blindado!
+        totalFollows: followsCount || 0,
+        totalShares: sharesCount || 0,
+        totalReposts: repostsCount || 0,
+        securityIncidents: 0
       });
+
+
     } catch (err) {
       console.error("ERRO AO CARREGAR MÉTRICAS:", err);
     } finally {
@@ -115,6 +126,30 @@ export default function DashboardPage() {
           loading={loading}
         />
         <MetricCard 
+          icon={Activity} 
+          label="Rede de Fé" 
+          value={metrics.totalFollows.toLocaleString()} 
+          change="Novas Conexões" 
+          color="#f43f5e" 
+          loading={loading}
+        />
+        <MetricCard 
+          icon={Share2} 
+          label="Impacto Viral" 
+          value={metrics.totalShares.toLocaleString()} 
+          change="Compartilhamentos" 
+          color="#8b5cf6" 
+          loading={loading}
+        />
+        <MetricCard 
+          icon={TrendingUp} 
+          label="Reverberação" 
+          value={metrics.totalReposts.toLocaleString()} 
+          change="Republicações" 
+          color="#06b6d4" 
+          loading={loading}
+        />
+        <MetricCard 
           icon={ShieldCheck} 
           label="Saúde do Servidor" 
           value="100%" 
@@ -122,7 +157,9 @@ export default function DashboardPage() {
           color="#f59e0b" 
           loading={loading}
         />
+
       </div>
+
 
       {/* 🔴 CONTROLE DE FUNCIONALIDADES (FEATURE TOGGLES) */}
       <FeatureManager />

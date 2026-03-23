@@ -32,21 +32,23 @@ export async function getPostsAction() {
     // Filtro para interações do usuário atual
     const userId = user?.id || '00000000-0000-0000-0000-000000000000';
 
-    const { data, error } = await supabase
+    const { data: rawData, error } = await supabase
       .from('posts')
       .select(`
         *, 
         profiles!profile_id(
           full_name, 
           username, 
-          avatar_url,
-          is_following:follows!following_id(count)
+          avatar_url
         ), 
         like_count:post_likes(count), 
         comment_count:comments(count), 
         prayer_count:post_prayers(count),
-        user_liked:post_likes(count),
-        user_prayed:post_prayers(count),
+        repost_count:post_reposts(count),
+        share_count:post_shares(count),
+        user_liked:post_likes(profile_id),
+        user_prayed:post_prayers(profile_id),
+        user_reposted:post_reposts(profile_id),
         comments(
           id, 
           content, 
@@ -56,54 +58,76 @@ export async function getPostsAction() {
           profiles:profile_id(full_name, username, avatar_url)
         )
       `)
-      .eq('user_liked.profile_id', userId)
-      .eq('user_prayed.profile_id', userId)
-      .eq('profiles.is_following.follower_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
+
+    // 🛡️ RECONSTRUÇÃO DE ESTADO: Identifica interações do usuário sem filtrar o feed
+    const data = (rawData as any[])?.map((post: any) => ({
+      ...post,
+      user_liked: { count: post.user_liked?.some((l: any) => l.profile_id === userId) ? 1 : 0 },
+      user_prayed: { count: post.user_prayed?.some((p: any) => p.profile_id === userId) ? 1 : 0 },
+      user_reposted: { count: post.user_reposted?.some((r: any) => r.profile_id === userId) ? 1 : 0 },
+    })) || [];
+
     return { success: true, data };
   } catch (err: any) {
     return { success: false, error: err.message };
   }
 }
 
-export async function updatePostAction(postId: string, content: string) {
+export async function getCommunityPostsAction(communityId: string) {
   try {
     const supabase = await createSupabaseServer();
     if (!supabase) throw new Error("Supabase não configurado.");
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Não autorizado.");
+    
+    // Filtro para interações do usuário atual
+    const userId = user?.id || '00000000-0000-0000-0000-000000000000';
 
-    const { error } = await supabase
+    const { data: rawData, error } = await supabase
       .from('posts')
-      .update({ content })
-      .eq('id', postId)
-      .eq('profile_id', user.id);
+      .select(`
+        *, 
+        profiles!profile_id(
+          full_name, 
+          username, 
+          avatar_url
+        ), 
+        like_count:post_likes(count), 
+        comment_count:comments(count), 
+        prayer_count:post_prayers(count),
+        repost_count:post_reposts(count),
+        share_count:post_shares(count),
+        user_liked:post_likes(profile_id),
+        user_prayed:post_prayers(profile_id),
+        user_reposted:post_reposts(profile_id),
+        comments(
+          id, 
+          content, 
+          created_at, 
+          profile_id, 
+          parent_id,
+          profiles:profile_id(full_name, username, avatar_url)
+        )
+      `)
+      .eq('community_id', communityId)
+      .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return { success: true };
+
+    // 🛡️ RECONSTRUÇÃO DE ESTADO
+    const data = (rawData as any[])?.map((post: any) => ({
+      ...post,
+      user_liked: { count: post.user_liked?.some((l: any) => l.profile_id === userId) ? 1 : 0 },
+      user_prayed: { count: post.user_prayed?.some((p: any) => p.profile_id === userId) ? 1 : 0 },
+      user_reposted: { count: post.user_reposted?.some((r: any) => r.profile_id === userId) ? 1 : 0 },
+    })) || [];
+
+    return { success: true, data };
   } catch (err: any) {
     return { success: false, error: err.message };
   }
 }
 
-export async function deletePostAction(postId: string) {
-  try {
-    const supabase = await createSupabaseServer();
-    if (!supabase) throw new Error("Supabase não configurado.");
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Não autorizado.");
 
-    const { error } = await supabase
-      .from('posts')
-      .delete()
-      .eq('id', postId)
-      .eq('profile_id', user.id);
-
-    if (error) throw error;
-    return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
-  }
-}

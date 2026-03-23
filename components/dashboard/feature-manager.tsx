@@ -79,7 +79,7 @@ export function FeatureManager() {
             }}
           >
             <div>
-               <div style={{ fontSize: 13, fontWeight: 800, color: feature.is_enabled ? "black" : "var(--muted)" }}>{feature.label}</div>
+               <div style={{ fontSize: 13, fontWeight: 800, color: feature.is_enabled ? "black" : "var(--muted)" }}>{feature.label || "Funcionalidade sem nome"}</div>
                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: 1, opacity: 0.5 }}>IDENTIFICADOR: {feature.name}</div>
             </div>
 

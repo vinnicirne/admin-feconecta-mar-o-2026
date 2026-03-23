@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Mic2, Clock, Users, ChevronLeft, Loader2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Mic2, Clock, Users, ChevronLeft, Loader2, Globe } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function NewWarRoomPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const communityId = searchParams.get("communityId");
   const supabase = createClient();
 
   const [title, setTitle] = useState("");
@@ -24,11 +26,19 @@ export default function NewWarRoomPage() {
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
   const [verseBase, setVerseBase] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [invitedUsers, setInvitedUsers] = useState("");
+  const [memberResults, setMemberResults] = useState<any[]>([]);
+  const [communityName, setCommunityName] = useState<string | null>(null);
 
   useEffect(() => {
     fetchActiveRooms();
     fetchUser();
-  }, []);
+    if (communityId) {
+      supabase.from('communities').select('name').eq('id', communityId).single()
+        .then(({ data }: { data: any }) => { if (data) setCommunityName(data.name); });
+    }
+  }, [communityId]);
 
   // Se houver salas ativas, começar na aba 'live'. Se não, começar na 'create'.
   useEffect(() => {
@@ -102,26 +112,47 @@ export default function NewWarRoomPage() {
           scheduled_for: isScheduled ? scheduledTimestamp : null,
           started_at: isScheduled ? null : new Date().toISOString(),
           verse_base: verseBase.trim() || null,
-          livekit_room_name: `war-room-${user.id}-${Date.now()}`
+          livekit_room_name: `war-room-${user.id}-${Date.now()}`,
+          is_private: isPrivate,
+          community_id: communityId || null
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // 📢 PUBLICAÇÃO AUTOMÁTICA NO FEED (Para convocar a comunidade)
-      const typeLabel = isScheduled ? '📅 AGENDADO' : '🚨 AGORA';
-      const timeLabel = isScheduled ? `para ${new Date(scheduledTimestamp).toLocaleString('pt-BR')}` : 'imediatamente';
-      const defaultCopy = `${typeLabel}: Acabei de convocar uma Sala de Guerra ${timeLabel}! TEMA: "${title.trim()}". 🙏`;
-      
-      await supabase.from('posts').insert([{
-        profile_id: user.id,
-        content: feedCopy.trim() || defaultCopy,
-        post_type: 'oracao',
-        background_style: isScheduled ? 'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)' : 'linear-gradient(135deg, #059669 0%, #064e3b 100%)',
-        is_bold: true,
-        metadata: { war_room_id: data.id }
-      }]);
+      if (isPrivate && invitedUsers.trim()) {
+         const matches = invitedUsers.match(/@([\w._-]+)/g);
+         if (matches) {
+            const usernames = matches.map(u => u.replace('@', ''));
+            const invitePayloads = usernames.map(u => ({
+               room_id: data.id,
+               host_id: user.id,
+               guest_username: u
+            }));
+            await supabase.from("prayer_room_invites").insert(invitePayloads);
+         }
+      }
+
+      if (!isPrivate) {
+        // 📢 PUBLICAÇÃO AUTOMÁTICA NO FEED (Para convocar a comunidade)
+        const typeLabel = isScheduled ? '📅 AGENDADO' : '🚨 AGORA';
+        const timeLabel = isScheduled ? `para ${new Date(scheduledTimestamp).toLocaleString('pt-BR')}` : 'imediatamente';
+        const defaultCopy = `${typeLabel}: Acabei de convocar uma Sala de Guerra ${timeLabel}! TEMA: "${title.trim()}". 🙏`;
+        
+        await supabase.from('posts').insert([{
+          profile_id: user.id,
+          content: feedCopy.trim() || defaultCopy,
+          post_type: 'oracao',
+          background_style: isScheduled ? 'linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)' : 'linear-gradient(135deg, #059669 0%, #064e3b 100%)',
+          is_bold: true,
+          community_id: communityId || null,
+          metadata: { 
+            war_room_id: data.id,
+            community_id: communityId || null 
+          }
+        }]);
+      }
 
       if (!isScheduled) {
         router.push(`/war-room/${data.id}`);
@@ -267,8 +298,8 @@ export default function NewWarRoomPage() {
         {/* CONTEÚDO DA ABA 2: NOVA ORAÇÃO */}
         {activeTab === 'create' && (
         <section className="anim-fade-in" style={{ maxWidth: 600 }}>
-          <p style={{ fontSize: 11, fontWeight: 900, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 20 }}>
-            Convocação Ministerial
+          <p style={{ fontSize: 11, fontWeight: 900, color: communityName ? "var(--primary)" : "var(--muted)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 20 }}>
+            {communityName ? `Sala para: ${communityName}` : "Convocação Ministerial"}
           </p>
           <div className="card shadow-lg" style={{ padding: 32, display: "flex", flexDirection: "column", gap: 24, background: "white", border: "1px solid var(--line)", borderRadius: 28 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -291,6 +322,66 @@ export default function NewWarRoomPage() {
                 </div>
               </div>
             )}
+            
+             <div style={{ display: "flex", gap: 12, marginBottom: 20, marginTop: 12 }}>
+               <button type="button" onClick={() => setIsPrivate(false)} style={{ flex: 1, padding: 14, borderRadius: 16, border: "2px solid", borderColor: !isPrivate ? "var(--primary)" : "var(--line)", background: !isPrivate ? "var(--primary-soft)" : "white", fontWeight: 800, color: !isPrivate ? "var(--primary)" : "var(--muted)", cursor: "pointer", transition: "0.2s" }}>🌎 SALA PÚBLICA</button>
+               <button type="button" onClick={() => setIsPrivate(true)} style={{ flex: 1, padding: 14, borderRadius: 16, border: "2px solid", borderColor: isPrivate ? "var(--primary)" : "var(--line)", background: isPrivate ? "var(--primary-soft)" : "white", fontWeight: 800, color: isPrivate ? "var(--primary)" : "var(--muted)", cursor: "pointer", transition: "0.2s" }}>🔒 SALA PRIVADA</button>
+             </div>
+
+              {isPrivate && (
+                <div style={{ marginBottom: 20, padding: 20, background: "var(--primary-soft)", borderRadius: 16, border: "1px dashed var(--primary)", position: "relative" }}>
+                  <label style={{ fontSize: 13, fontWeight: 800, display: "block", marginBottom: 8, color: "var(--primary)" }}>Convide as pessoas pelo @</label>
+                  <input 
+                    value={invitedUsers} 
+                    onChange={async (e) => {
+                      const val = e.target.value;
+                      setInvitedUsers(val);
+                      
+                      // Lógica de Busca Rápida
+                      const lastWord = val.split(/[ ,]+/).pop() || "";
+                      if (lastWord.startsWith('@') && lastWord.length > 2) {
+                        const { data } = await supabase
+                          .from('profiles')
+                          .select('username, full_name')
+                          .ilike('username', `${lastWord.slice(1)}%`)
+                          .limit(5);
+                        (window as any)._memberResults = data || [];
+                        setMemberResults(data || []);
+                      } else {
+                        setMemberResults([]);
+                      }
+                    }} 
+                    placeholder="Ex: @pastorjoao, @irmaomaria..." 
+                    className="input" 
+                    style={{ width: "100%", padding: "14px 16px" }} 
+                  />
+                  
+                  {memberResults.length > 0 && (
+                    <div style={{ position: "absolute", top: "100%", left: 20, right: 20, background: "white", boxShadow: "0 10px 25px rgba(0,0,0,0.1)", borderRadius: 12, zIndex: 100, padding: 8, display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+                      {memberResults.map((u: any, i: number) => (
+                        <button 
+                          key={i}
+                          onClick={() => {
+                            const words = invitedUsers.split(/[ ,]+/);
+                            words.pop();
+                            const newVal = [...words, `@${u.username}`].join(', ') + ', ';
+                            setInvitedUsers(newVal);
+                            setMemberResults([]);
+                          }}
+                          style={{ textAlign: "left", padding: "10px 14px", borderRadius: 8, border: 0, background: "none", cursor: "pointer", transition: "0.2s" }}
+                          onMouseOver={e => e.currentTarget.style.background = 'var(--line)'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                        >
+                          <strong style={{ fontSize: 13 }}>{u.full_name}</strong>
+                          <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 8 }}>@{u.username}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <p style={{ margin: "8px 0 0", fontSize: 12, opacity: 0.8, color: "var(--primary)" }}>Esta sala NÃO aparecerá no Feed. Os convidados selecionados receberão um alerta para entrar.</p>
+                </div>
+              )}
             
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <label style={{ fontSize: 13, fontWeight: 800, display: "block", marginBottom: 8 }}>Título da Intercessão *</label>

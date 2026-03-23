@@ -27,7 +27,7 @@ export function LayoutShell({ user, children }: { user: any; children: React.Rea
           overflowX: "hidden"
         }}
       >
-        <Topbar user={user} />
+        <Topbar user={user} menuItems={[]} />
         
         <div style={{ marginTop: 24, flex: 1, padding: "0 20px" }}>
           {children}

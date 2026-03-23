@@ -160,3 +160,48 @@ export type BibleVersion = {
   usage: string;
   favorites: string;
 };
+
+export interface AppProfile {
+  id: string;
+  full_name: string;
+  username: string;
+  avatar_url?: string;
+}
+
+export interface AppCommunity {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  leader_id: string;
+  cover_url?: string;
+  created_at: string;
+  leader?: AppProfile;
+  members?: { count: number }[];
+}
+
+export interface AppPost {
+  id: string;
+  community_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  author?: AppProfile;
+}
+
+export interface PrayerRoom {
+  id: string;
+  community_id: string;
+  host_id: string;
+  status: "live" | "ended";
+  current_viewers: number;
+  host?: AppProfile;
+}
+
+export interface Ministry {
+  id: string;
+  community_id: string;
+  name: string;
+  description?: string;
+  status: "active" | "inactive";
+}

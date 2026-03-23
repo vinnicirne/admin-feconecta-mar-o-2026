@@ -1,104 +1,128 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Globe, Users, ChevronLeft, Loader2, UserPlus } from "lucide-react";
+import dynamic from "next/dynamic";
+import { 
+  Flame, 
+  Users, 
+  Globe,
+  Radio,
+  ChevronRight,
+  Music,
+  Heart,
+  Volume2
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function CommunityPage() {
+// hooks
+import { useAuth } from "@/hooks/use-auth";
+import { useCommunity } from "@/hooks/use-community";
+import { useRealtimeRooms } from "@/hooks/use-realtime-rooms";
+import { useToast } from "@/components/ui/toast";
+
+import { 
+  HeroSection, 
+  LiveSections, 
+  RoomsSection, 
+  PrayerRequests,
+  TimelineSection
+} from "@/components/app/communities/sections";
+import { RightSidebar } from "@/components/app/communities/right-sidebar";
+import { getCommunityPostsAction } from "@/app/actions/post-actions";
+
+export default function CommunityChurchPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+  const { toast } = useToast();
+  const { user } = useAuth();
 
-  const [community, setCommunity] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [localRooms, setLocalRooms] = useState<any[]>([]);
+  const [globalRooms, setGlobalRooms] = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
 
-  useEffect(() => {
-    loadCommunity();
-  }, [id]);
+  const {
+    community,
+    loading: communityLoading,
+    onlineCount,
+  } = useCommunity(id);
 
-  const loadCommunity = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("communities")
-        .select(`*, leader:profiles!leader_id(full_name, username)`)
-        .eq("id", id)
-        .single();
-
-      if (error) throw error;
-      setCommunity(data);
-    } catch (err: any) {
-      alert(`Erro: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
+  const fetchPosts = async () => {
+    const res = await getCommunityPostsAction(id);
+    if (res.success) setPosts(res.data || []);
   };
 
-  if (loading) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "60vh" }}>
-        <Loader2 size={32} className="spin muted" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    fetchPosts();
+  }, [id]);
 
-  if (!community) {
-    return (
-      <div style={{ textAlign: "center", padding: 60 }}>
-        <p className="muted">Comunidade não encontrada.</p>
-        <button onClick={() => router.push("/")} className="button" style={{ marginTop: 20 }}>Voltar ao Feed</button>
-      </div>
-    );
-  }
+  // 🔴 REALTIME
+  useRealtimeRooms(id, setLocalRooms);
+
+  // 🌍 MONITOR GLOBAL
+  useEffect(() => {
+    const fetchGlobal = async () => {
+      const { data } = await supabase.from("prayer_rooms").select("*").is('community_id', null).eq('status', 'live').limit(5);
+      setGlobalRooms(data || []);
+    };
+    fetchGlobal();
+    const ch = supabase.channel('global-sync-altar').on('postgres_changes', { event: '*', table: 'prayer_rooms', filter: 'community_id=is.null' }, () => fetchGlobal()).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [supabase]);
+
+  const handleAction = async () => {
+    const active = localRooms[0] || globalRooms[0];
+    if (active) {
+       router.push(`/war-room/${active.id}`);
+       return;
+    }
+    
+    try {
+      if (!user) { toast("Login necessário", "Entre para iniciar o clamor.", "error"); return; }
+      const { data } = await supabase.from("prayer_rooms").insert({ name: `Clamor ${currentCommunity.name}`, community_id: id, status: "live", host_id: user.id }).select().single();
+      if (data) router.push(`/war-room/${data.id}`);
+    } catch (e) { toast("Erro", "Falha técnica no altar.", "error"); }
+  };
+
+  if (communityLoading || !community) return <div className="min-h-screen bg-slate-50" />;
+
+  const currentCommunity = community!;
+
+  const activePrayer = localRooms[0] || globalRooms[0];
 
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto", padding: "20px 16px 120px" }}>
-
-      <button onClick={() => router.push("/")} style={{ background: "none", border: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, color: "var(--muted)", marginBottom: 24, fontWeight: 700, fontSize: 14 }}>
-        <ChevronLeft size={18} /> Voltar
-      </button>
-
-      {/* Header da Comunidade */}
-      <div className="card" style={{ padding: 32, marginBottom: 20, background: "linear-gradient(135deg, #d97706 0%, #92400e 100%)", color: "white", border: 0 }}>
-        <div style={{ width: 64, height: 64, borderRadius: 18, background: "rgba(255,255,255,0.2)", display: "grid", placeItems: "center", marginBottom: 20 }}>
-          <Globe size={32} />
-        </div>
-        <h1 style={{ fontSize: "1.8rem", fontWeight: 900, margin: "0 0 8px" }}>{community.name}</h1>
-        <span style={{ padding: "4px 14px", borderRadius: 100, background: "rgba(255,255,255,0.2)", fontSize: 11, fontWeight: 800 }}>
-          {community.category}
-        </span>
-
-        {community.description && (
-          <p style={{ margin: "20px 0 0", opacity: 0.85, fontSize: 14, lineHeight: 1.7 }}>{community.description}</p>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className="card" style={{ padding: 24, marginBottom: 20 }}>
-        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--line)", display: "grid", placeItems: "center" }}>
-            <Users size={20} className="muted" />
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 p-6">
+        
+        {/* COLUNA PRINCIPAL */}
+        <main className="flex flex-col gap-6">
+          <HeroSection 
+            community={currentCommunity} 
+            activePrayer={activePrayer} 
+            handleAction={handleAction} 
+          />
+          <LiveSections onlineCount={onlineCount} />
+          
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-8">
+            <div className="flex flex-col gap-8">
+               <TimelineSection posts={posts} onRefresh={fetchPosts} communityId={id} />
+            </div>
+            <div className="flex flex-col gap-8">
+               <RoomsSection globalRooms={globalRooms} localRooms={localRooms} />
+               <PrayerRequests />
+            </div>
           </div>
-          <div>
-            <p style={{ margin: 0, fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>LÍDER FUNDADOR</p>
-            <strong style={{ fontSize: 15 }}>{community.leader?.full_name || "Líder"}</strong>
-            <p style={{ margin: 0, fontSize: 12, color: "var(--muted)" }}>@{community.leader?.username || "lider"}</p>
-          </div>
-        </div>
-      </div>
+        </main>
 
-      {/* Ações */}
-      <button
-        style={{
-          width: "100%", padding: "16px", borderRadius: 100, border: 0,
-          background: "var(--accent)", color: "white",
-          fontWeight: 900, fontSize: 15, cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 10
-        }}
-      >
-        <UserPlus size={20} /> Participar desta Comunidade
-      </button>
+        {/* SIDEBAR */}
+        <RightSidebar 
+          community={currentCommunity} 
+          activeRoomsCount={localRooms.length + globalRooms.length} 
+          onlineCount={onlineCount} 
+        />
+        
+      </div>
     </div>
   );
 }
