@@ -49,7 +49,7 @@ export function useRealtimePosts(communityId: string | null, setPosts: React.Dis
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: string) => {
         if (status === 'SUBSCRIBED') {
           console.log(`📡 Realtime Posts: Conectado na comunidade ${communityId}`);
         }
