@@ -9,6 +9,7 @@ import CameraModal from "./camera-modal";
 import TextEditorModal from "./text-editor-modal";
 import { createPostAction } from "@/app/actions/post-actions";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 
 interface MobilePostSheetProps {
   open: boolean;
