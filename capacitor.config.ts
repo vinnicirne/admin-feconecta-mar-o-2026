@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'FeConecta',
   webDir: 'out',
   server: {
-    url: 'https://admin-feconecta-mar-o-2026.vercel.app',
+    url: 'https://live-feconecta.vercel.app',
     cleartext: true
   }
 };
