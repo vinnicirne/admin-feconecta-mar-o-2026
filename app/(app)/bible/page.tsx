@@ -1160,7 +1160,7 @@ export default function BiblePage() {
                            <span style={{ fontSize: 10, color: "var(--muted)" }}>{new Date(com.created_at).toLocaleDateString()}</span>
                         </div>
                      </div>
-                     {editingComment?.id === com.id ? (
+                     {editingComment && editingComment.id === com.id ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                            <textarea 
                              autoFocus
