@@ -494,9 +494,30 @@ export default function BiblePage() {
   const clearWordSearch = () => { setWordSearchActive(false); setWordResults(null); setWordSearchStats(null); };
 
   // ── Barra de ação — funções ───────────────────────────
+  const getFormattedReference = () => {
+    if (selectedVerses.length === 0) return "";
+    const sorted = [...selectedVerses].sort((a, b) => a - b);
+    const ranges: string[] = [];
+    let start = sorted[0];
+    let end = sorted[0];
+
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === end + 1) {
+        end = sorted[i];
+      } else {
+        ranges.push(start === end ? `${start}` : `${start}-${end}`);
+        start = sorted[i];
+        end = sorted[i];
+      }
+    }
+    ranges.push(start === end ? `${start}` : `${start}-${end}`);
+    return `${selectedBook?.name} ${chapter}:${ranges.join(",")}`;
+  };
+
   const getSelectedVersesText = () => {
+    const sorted = [...selectedVerses].sort((a, b) => a - b);
     const lines = processedVerses
-      .filter((v) => v.type === "verse" && selectedVerses.includes(v.number!))
+      .filter((v) => v.type === "verse" && sorted.includes(v.number!))
       .map((v) => `${v.number} ${v.segments.map((s) => s.text).join("")}`);
     return lines.join(" ");
   };
@@ -509,9 +530,17 @@ export default function BiblePage() {
 
   const openCreatePost = () => {
     const text = getSelectedVersesText();
-    const ref  = `${selectedBook?.name ?? ""} ${chapter}`;
-    const encoded = encodeURIComponent(`"${text}" — ${ref}`);
-    router.push(`/feed/create?citation=${encoded}`);
+    const ref = getFormattedReference();
+    const comment = commentContent.trim() ? `\n\n🕊️ Minha Reflexão:\n"${commentContent}"` : "";
+    const citation = `📖 ${ref}\n\n"${text}"${comment}\n\n#EstudoBiblico #FeConecta`;
+    router.push(`/feed/create?citation=${encodeURIComponent(citation)}`);
+  };
+
+  const shareSpecificComment = (comText: string, vNum: number) => {
+    const text = filteredVerses.find(v => parseInt(v.number) === vNum)?.segments.map(s => s.text).join("") || "";
+    const ref = `${selectedBook?.name} ${chapter}:${vNum}`;
+    const citation = `📖 ${ref}\n\n"${text}"\n\n🕊️ Reflexão:\n"${comText}"`;
+    router.push(`/feed/create?citation=${encodeURIComponent(citation)}`);
   };
 
   const handleShare = async () => {
@@ -1126,7 +1155,7 @@ export default function BiblePage() {
                <button onClick={() => setIsCommentModalOpen(false)} style={{ background: "none", border: 0 }}><X size={20}/></button>
             </div>
             <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16, fontWeight: 700 }}>
-               {selectedBook?.name} {chapter}:{selectedVerses.join(",")}
+               {getFormattedReference()}
             </p>
             <textarea 
                autoFocus
@@ -1155,7 +1184,8 @@ export default function BiblePage() {
                   <div key={com.id} style={{ background: "white", padding: 16, borderRadius: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, alignItems: "center" }}>
                         <span style={{ fontSize: 11, fontWeight: 800, color: "#9333ea" }}>Você (Ministério)</span>
-                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                           <button onClick={() => shareSpecificComment(com.content, showingThreadFor!)} style={{ background: "none", border: 0, color: "var(--primary)", cursor: "pointer" }} title="Compartilhar Estudo"><PlusCircle size={14}/></button>
                            <button onClick={() => setEditingComment({ id: com.id, content: com.content })} style={{ background: "none", border: 0, color: "var(--muted)", cursor: "pointer" }}><Highlighter size={12}/></button>
                            <button onClick={() => setIsDeletingComment(com.id)} style={{ background: "none", border: 0, color: "#ef4444", cursor: "pointer" }}><X size={12}/></button>
                            <span style={{ fontSize: 10, color: "var(--muted)" }}>{new Date(com.created_at).toLocaleDateString()}</span>
